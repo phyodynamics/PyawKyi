@@ -3,57 +3,99 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { Shield, KeyRound, Sparkles } from "lucide-react";
+
+type Stage = "welcome" | "auth" | "credentials" | "ready" | "exit";
 
 interface WelcomeAnimationProps {
   onComplete: () => void;
   userName?: string;
   userAvatar?: string | null;
+  authStage?: "welcome" | "auth" | "credentials" | "ready";
 }
+
+const STAGE_CONFIG = {
+  welcome: {
+    label: "Welcome to Pyaw Kyi",
+    sublabel: "ပြောလိုက်ယုံပါပဲ · Just Say It",
+    icon: null,
+  },
+  auth: {
+    label: "Checking Authentication",
+    sublabel: "Verifying your account...",
+    icon: Shield,
+  },
+  credentials: {
+    label: "Getting Credentials",
+    sublabel: "Loading your data...",
+    icon: KeyRound,
+  },
+  ready: {
+    label: "All Set!",
+    sublabel: "Let's get started",
+    icon: Sparkles,
+  },
+};
 
 export function WelcomeAnimation({
   onComplete,
   userName,
   userAvatar,
+  authStage = "welcome",
 }: WelcomeAnimationProps) {
-  const [stage, setStage] = useState<"logo" | "text" | "exit">("logo");
+  const [displayStage, setDisplayStage] = useState<Stage>("welcome");
+
+  // React to external authStage changes
+  useEffect(() => {
+    setDisplayStage(authStage);
+  }, [authStage]);
+
+  // Once we hit "ready", wait a beat then exit
+  useEffect(() => {
+    if (displayStage === "ready") {
+      const timer = setTimeout(() => setDisplayStage("exit"), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [displayStage]);
 
   useEffect(() => {
-    const logoTimer = setTimeout(() => setStage("text"), 800);
-    const textTimer = setTimeout(() => setStage("exit"), 2200);
-    const exitTimer = setTimeout(() => onComplete(), 2800);
+    if (displayStage === "exit") {
+      const timer = setTimeout(() => onComplete(), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [displayStage, onComplete]);
 
-    return () => {
-      clearTimeout(logoTimer);
-      clearTimeout(textTimer);
-      clearTimeout(exitTimer);
-    };
-  }, [onComplete]);
+  const config =
+    displayStage !== "exit"
+      ? STAGE_CONFIG[displayStage]
+      : STAGE_CONFIG["ready"];
+  const StageIcon = config.icon;
+
+  // Progress width based on stage
+  const progressMap: Record<Stage, string> = {
+    welcome: "15%",
+    auth: "45%",
+    credentials: "75%",
+    ready: "100%",
+    exit: "100%",
+  };
 
   return (
     <AnimatePresence>
-      {stage !== "exit" && (
+      {displayStage !== "exit" && (
         <motion.div
           className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background"
           initial={{ opacity: 1 }}
-          exit={{ opacity: 0, scale: 1.1 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          exit={{ opacity: 0, scale: 1.05 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         >
-          <motion.div
-            className="flex flex-col items-center gap-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          >
+          <div className="flex flex-col items-center gap-6 max-w-sm px-6">
             {/* Logo */}
             <motion.div
-              className="relative w-48 h-48 md:w-64 md:h-64"
+              className="relative w-32 h-32 md:w-40 md:h-40"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{
-                duration: 0.5,
-                ease: [0.22, 1, 0.36, 1],
-                delay: 0.1,
-              }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             >
               <Image
                 src="/pyaw_kyi.png"
@@ -64,74 +106,129 @@ export function WelcomeAnimation({
               />
             </motion.div>
 
-            {/* Welcome text */}
-            <motion.div
-              className="text-center"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{
-                opacity: stage === "text" || stage === "logo" ? 1 : 0,
-                y: 0,
-              }}
-              transition={{ duration: 0.4, delay: 0.3 }}
-            >
-              <motion.p
-                className="text-lg md:text-xl text-muted-foreground"
-                initial={{ opacity: 0, y: 10 }}
+            {/* Stage Content */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={displayStage}
+                className="text-center flex flex-col items-center gap-3"
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.4 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.3 }}
               >
-                Welcome to Pyaw Kyi
-              </motion.p>
+                {/* Stage icon */}
+                {StageIcon && (
+                  <motion.div
+                    className="w-10 h-10 rounded-full bg-foreground/10 flex items-center justify-center"
+                    initial={{ scale: 0.5 }}
+                    animate={{ scale: 1 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 20,
+                    }}
+                  >
+                    <StageIcon className="w-5 h-5 text-foreground" />
+                  </motion.div>
+                )}
 
-              {/* User info */}
-              {userName && (
-                <motion.div
-                  className="flex items-center justify-center gap-2.5 mt-3"
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, delay: 0.6 }}
-                >
-                  {userAvatar && (
-                    <Image
-                      src={userAvatar}
-                      alt={userName}
-                      width={28}
-                      height={28}
-                      className="w-7 h-7 rounded-full border border-border"
-                    />
-                  )}
-                  <span className="text-base font-medium text-foreground">
-                    {userName}
-                  </span>
-                </motion.div>
-              )}
-            </motion.div>
+                {/* Stage label */}
+                <div>
+                  <p className="text-lg md:text-xl font-semibold text-foreground">
+                    {config.label}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {config.sublabel}
+                  </p>
+                </div>
 
-            {/* Built by */}
-            <motion.p
-              className="text-sm text-muted-foreground/60"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4, delay: 0.7 }}
-            >
+                {/* User info — only on welcome stage */}
+                {displayStage === "welcome" && userName && (
+                  <motion.div
+                    className="flex items-center justify-center gap-2.5 mt-1"
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    {userAvatar && (
+                      <Image
+                        src={userAvatar}
+                        alt={userName}
+                        width={28}
+                        height={28}
+                        className="w-7 h-7 rounded-full border border-border"
+                      />
+                    )}
+                    <span className="text-sm font-medium text-foreground">
+                      {userName}
+                    </span>
+                  </motion.div>
+                )}
+
+                {/* Loading dots for auth/credentials stages */}
+                {(displayStage === "auth" ||
+                  displayStage === "credentials") && (
+                  <div className="flex items-center gap-1 mt-1">
+                    {[0, 1, 2].map((i) => (
+                      <motion.div
+                        key={i}
+                        className="w-1.5 h-1.5 rounded-full bg-foreground/40"
+                        animate={{ opacity: [0.3, 1, 0.3] }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          delay: i * 0.2,
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Checkmark for ready stage */}
+                {displayStage === "ready" && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{
+                      type: "spring",
+                      stiffness: 400,
+                      damping: 15,
+                    }}
+                    className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center"
+                  >
+                    <svg
+                      className="w-4 h-4 text-background"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={3}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </motion.div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Progress bar */}
+          <div className="absolute bottom-20 w-48">
+            <div className="h-1 bg-muted rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-foreground rounded-full"
+                initial={{ width: "0%" }}
+                animate={{ width: progressMap[displayStage] }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              />
+            </div>
+            <p className="text-[10px] text-muted-foreground/60 text-center mt-2">
               Built by Phyo Zin Ko
-            </motion.p>
-          </motion.div>
-
-          {/* Loading bar */}
-          <motion.div
-            className="absolute bottom-20 w-48 h-0.5 bg-muted overflow-hidden rounded-full"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            <motion.div
-              className="h-full bg-foreground"
-              initial={{ width: "0%" }}
-              animate={{ width: "100%" }}
-              transition={{ duration: 1.8, ease: "linear", delay: 0.6 }}
-            />
-          </motion.div>
+            </p>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

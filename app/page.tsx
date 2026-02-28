@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
-import { History, LogOut, X, Trash2, Zap } from "lucide-react";
+import { History, LogOut, X, Trash2, Code2 } from "lucide-react";
 import Image from "next/image";
 import { WelcomeAnimation } from "@/components/welcome-animation";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -81,6 +81,9 @@ interface HistoryItem {
 
 export default function Home() {
   const [showWelcome, setShowWelcome] = useState(true);
+  const [loadingStage, setLoadingStage] = useState<
+    "welcome" | "auth" | "credentials" | "ready"
+  >("welcome");
   const [currentMode, setCurrentMode] = useState<Mode>("polish");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isRefining, setIsRefining] = useState(false);
@@ -112,13 +115,19 @@ export default function Home() {
     resetRecording,
   } = useVoiceRecorder();
 
-  // Load user info and history from Supabase
+  // Staged loading: welcome → auth → credentials → ready
   useEffect(() => {
     const loadData = async () => {
+      // Stage 1: Welcome (shown immediately)
+      await new Promise((r) => setTimeout(r, 800));
+
+      // Stage 2: Checking Authentication
+      setLoadingStage("auth");
       const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
       if (user) {
         setUserName(
           user.user_metadata?.full_name ||
@@ -128,6 +137,9 @@ export default function Home() {
         );
         setUserAvatar(user.user_metadata?.avatar_url || null);
         setIsAdmin(user.email === "bababoi134459@gmail.com");
+
+        // Stage 3: Getting Credentials
+        setLoadingStage("credentials");
         const { data } = await supabase
           .from("saved_items")
           .select("*")
@@ -135,6 +147,9 @@ export default function Home() {
           .order("created_at", { ascending: false });
         if (data) setHistoryItems(data);
       }
+
+      // Stage 4: Ready
+      setLoadingStage("ready");
     };
     loadData();
   }, []);
@@ -398,6 +413,7 @@ export default function Home() {
             onComplete={() => setShowWelcome(false)}
             userName={userName}
             userAvatar={userAvatar}
+            authStage={loadingStage}
           />
         )}
       </AnimatePresence>
@@ -449,7 +465,7 @@ export default function Home() {
               whileTap={{ scale: 0.95 }}
               aria-label="API"
             >
-              <Zap className="w-5 h-5 text-foreground" />
+              <Code2 className="w-5 h-5 text-foreground" />
             </motion.button>
             <NotificationPopup />
             <ThemeToggle />
