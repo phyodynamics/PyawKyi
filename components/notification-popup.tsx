@@ -246,37 +246,37 @@ export function NotificationPopup() {
         )}
       </motion.button>
 
-      {/* Notification Panel (Dropdown) */}
+      {/* Notification Panel */}
       <AnimatePresence>
         {showPanel && (
           <>
             {/* Backdrop */}
             <motion.div
-              className="fixed inset-0 z-40"
+              className="fixed inset-0 z-40 bg-black/20"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowPanel(false)}
             />
-            {/* Panel */}
+            {/* Panel — fixed position for mobile compatibility */}
             <motion.div
-              className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl z-50"
-              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              className="fixed right-2 left-2 sm:left-auto sm:right-4 top-14 sm:top-16 sm:w-80 max-h-[70vh] overflow-y-auto bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl z-50"
+              initial={{ opacity: 0, y: -10, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              exit={{ opacity: 0, y: -10, scale: 0.97 }}
               transition={{ duration: 0.2 }}
             >
               {/* Header */}
-              <div className="sticky top-0 flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-900 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-sm rounded-t-2xl">
+              <div className="sticky top-0 flex items-center justify-between px-4 py-3 border-b border-neutral-100 dark:border-neutral-900 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-sm rounded-t-2xl z-10">
                 <div className="flex items-center gap-2">
                   <Volume2 className="w-4 h-4 text-neutral-400" />
                   <span className="text-sm font-semibold">Notifications</span>
                 </div>
                 <button
                   onClick={() => setShowPanel(false)}
-                  className="p-1 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                  className="p-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
                 >
-                  <X className="w-3.5 h-3.5 text-neutral-400" />
+                  <X className="w-4 h-4 text-neutral-400" />
                 </button>
               </div>
 
@@ -321,7 +321,7 @@ export function NotificationPopup() {
 
               {/* Push notification enable/status */}
               {pushSupported && (
-                <div className="sticky bottom-0 px-4 py-2.5 border-t border-neutral-100 dark:border-neutral-900 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-sm rounded-b-2xl">
+                <div className="sticky bottom-0 px-4 py-3 border-t border-neutral-100 dark:border-neutral-900 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-sm rounded-b-2xl">
                   {pushEnabled ? (
                     <div className="flex items-center gap-2 text-xs text-neutral-400">
                       <span className="w-2 h-2 rounded-full bg-green-500" />
@@ -330,7 +330,7 @@ export function NotificationPopup() {
                   ) : (
                     <button
                       onClick={handleEnablePush}
-                      className="w-full py-2 rounded-lg bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity"
+                      className="w-full py-2.5 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity"
                     >
                       🔔 Enable Push Notifications
                     </button>
@@ -346,10 +346,10 @@ export function NotificationPopup() {
       <AnimatePresence>
         {toast && (
           <motion.div
-            className="fixed top-4 right-4 z-[9999] w-80 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl overflow-hidden"
-            initial={{ opacity: 0, y: -20, x: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, x: 20, scale: 0.95 }}
+            className="fixed top-3 right-3 left-3 sm:left-auto sm:right-4 sm:top-4 z-[9999] sm:w-80 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl overflow-hidden"
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
           >
             {/* Color bar */}
