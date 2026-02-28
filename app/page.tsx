@@ -267,6 +267,7 @@ export default function Home() {
           let content = "";
           if ("refined_text" in result) content = result.refined_text;
           else if ("plan_title" in result) content = JSON.stringify(result);
+          else if ("study_title" in result) content = JSON.stringify(result);
           else if ("generated_content" in result)
             content = result.generated_content;
 
@@ -276,9 +277,16 @@ export default function Home() {
           else if ("plan_title" in result) {
             try {
               const parsed = JSON.parse(refined);
-              setResult(parsed as PlanResult);
+              setResult({ ...result, ...parsed } as PlanResult);
             } catch {
               // If parsing fails, keep the original result
+            }
+          } else if ("study_title" in result) {
+            try {
+              const parsed = JSON.parse(refined);
+              setResult({ ...result, ...parsed } as LearnResult);
+            } catch {
+              // If parsing fails, keep the original
             }
           } else if ("generated_content" in result)
             setResult({ generated_content: refined });
