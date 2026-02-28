@@ -21,10 +21,12 @@ import {
   Code,
   TrendingUp,
   BookOpen,
+  Bell,
+  Send,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-type Tab = "analytics" | "forms" | "status" | "keys" | "management";
+type Tab = "analytics" | "forms" | "status" | "keys" | "management" | "notify";
 
 interface UserProfile {
   id: string;
@@ -72,6 +74,7 @@ const tabs: { id: Tab; label: string; icon: typeof ClipboardList }[] = [
   { id: "status", label: "Status", icon: Shield },
   { id: "keys", label: "API Keys", icon: Key },
   { id: "management", label: "Users", icon: Users },
+  { id: "notify", label: "Notify", icon: Bell },
 ];
 
 export default function AdminPage() {
@@ -83,6 +86,14 @@ export default function AdminPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  // Notification form state
+  const [notiTitle, setNotiTitle] = useState("");
+  const [notiMessage, setNotiMessage] = useState("");
+  const [notiType, setNotiType] = useState<
+    "info" | "update" | "promo" | "alert"
+  >("info");
+  const [notiSending, setNotiSending] = useState(false);
+  const [notiSent, setNotiSent] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -142,6 +153,30 @@ export default function AdminPage() {
   const revokeApiKey = async (userId: string) => {
     if (!confirm("Revoke this user's Gemini API key?")) return;
     await adminAction({ action: "revoke_api_key", userId });
+  };
+
+  const sendNotification = async () => {
+    if (!notiTitle.trim() || !notiMessage.trim()) return;
+    setNotiSending(true);
+    try {
+      await fetch("/api/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "send_notification",
+          title: notiTitle.trim(),
+          message: notiMessage.trim(),
+          type: notiType,
+        }),
+      });
+      setNotiTitle("");
+      setNotiMessage("");
+      setNotiSent(true);
+      setTimeout(() => setNotiSent(false), 3000);
+    } catch {
+      alert("Failed to send notification");
+    }
+    setNotiSending(false);
   };
 
   const handleLogout = async () => {
@@ -885,6 +920,131 @@ export default function AdminPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════ */}
+            {/* Tab: NOTIFICATIONS                 */}
+            {/* ═══════════════════════════════════ */}
+            {activeTab === "notify" && (
+              <div className="max-w-lg mx-auto space-y-6">
+                <div className="text-center">
+                  <h2 className="text-xl font-bold mb-1">Send Notification</h2>
+                  <p className="text-sm text-neutral-500">
+                    Broadcast a message to all connected users in real-time
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Type selector */}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Type</label>
+                    <div className="flex gap-2">
+                      {(["info", "update", "promo", "alert"] as const).map(
+                        (t) => {
+                          const icons = {
+                            info: "ℹ️",
+                            update: "🚀",
+                            promo: "🎉",
+                            alert: "⚠️",
+                          };
+                          return (
+                            <button
+                              key={t}
+                              onClick={() => setNotiType(t)}
+                              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
+                                notiType === t
+                                  ? "bg-black text-white dark:bg-white dark:text-black border-transparent"
+                                  : "border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-950"
+                              }`}
+                            >
+                              <span>{icons[t]}</span>
+                              <span className="capitalize">{t}</span>
+                            </button>
+                          );
+                        },
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Title */}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Title</label>
+                    <input
+                      type="text"
+                      value={notiTitle}
+                      onChange={(e) => setNotiTitle(e.target.value)}
+                      placeholder="Notification title..."
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20"
+                    />
+                  </div>
+
+                  {/* Message */}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium">Message</label>
+                    <textarea
+                      value={notiMessage}
+                      onChange={(e) => setNotiMessage(e.target.value)}
+                      placeholder="Write your notification message..."
+                      rows={3}
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 resize-none"
+                    />
+                  </div>
+
+                  {/* Preview */}
+                  {(notiTitle || notiMessage) && (
+                    <div className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950">
+                      <p className="text-[10px] uppercase tracking-wider text-neutral-400 mb-2 font-medium">
+                        Preview
+                      </p>
+                      <div className="flex items-start gap-3">
+                        <span className="text-base mt-0.5">
+                          {
+                            {
+                              info: "ℹ️",
+                              update: "🚀",
+                              promo: "🎉",
+                              alert: "⚠️",
+                            }[notiType]
+                          }
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold">
+                            {notiTitle || "Title"}
+                          </p>
+                          <p className="text-xs text-neutral-500 mt-0.5">
+                            {notiMessage || "Message"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Send button */}
+                  <motion.button
+                    onClick={sendNotification}
+                    disabled={
+                      notiSending || !notiTitle.trim() || !notiMessage.trim()
+                    }
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-black text-white dark:bg-white dark:text-black text-sm font-semibold disabled:opacity-40 transition-opacity"
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                  >
+                    {notiSending ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : notiSent ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Sent Successfully!
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Send to All Users
+                      </>
+                    )}
+                  </motion.button>
+                </div>
               </div>
             )}
           </>

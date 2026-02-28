@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ModeSelector, getModeDescription } from "@/components/mode-selector";
 import { RecordButton } from "@/components/record-button";
 import { Footer } from "@/components/footer";
+import { NotificationPopup } from "@/components/notification-popup";
 import { ErrorToast, useErrorToast } from "@/components/error-toast";
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 import { processAudio, refineContent, refineCode } from "@/lib/ai-service";
@@ -426,7 +427,7 @@ export default function Home() {
               </span>
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="relative flex items-center gap-2">
             <motion.button
               onClick={() => setShowHistory(true)}
               className="relative p-2.5 rounded-full bg-muted hover:bg-muted/80 transition-colors"
@@ -450,6 +451,7 @@ export default function Home() {
             >
               <Zap className="w-5 h-5 text-foreground" />
             </motion.button>
+            <NotificationPopup />
             <ThemeToggle />
             <motion.button
               onClick={() => setShowSettings(true)}

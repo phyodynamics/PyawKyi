@@ -153,6 +153,25 @@ export async function POST(request: NextRequest) {
       break;
     }
 
+    case "send_notification": {
+      const { title, message, type } = body;
+      if (!title || !message)
+        return errorResponse("Missing title or message", 400);
+      const notifType = type || "info";
+      if (!["info", "update", "promo", "alert"].includes(notifType)) {
+        return errorResponse(
+          "Invalid type. Must be: info, update, promo, alert",
+          400,
+        );
+      }
+      await service.from("notifications").insert({
+        title,
+        message,
+        type: notifType,
+      });
+      break;
+    }
+
     default:
       return errorResponse("Unknown action", 400);
   }
