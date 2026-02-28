@@ -433,25 +433,61 @@ export function ApiKeyPanel({ isOpen, onClose }: ApiKeyPanelProps) {
                       <Smartphone className="w-4 h-4 text-neutral-400" />
                       Apple Shortcuts
                     </h3>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {[
-                        "Open Shortcuts app → + New Shortcut",
-                        'Add "Dictate Text" action',
-                        'Add "Get Contents of URL" action',
-                        "Set URL to your-domain.com/api/v1/process",
-                        "Method: POST",
-                        "Headers: Authorization → Bearer YOUR_KEY",
-                        'Body: JSON → {"mode":"polish","text":"Dictated Text"}',
-                        'Add "Get Value for Key" → result.refined_text',
-                        'Add "Show Result" action',
+                        {
+                          en: "Open Shortcuts app → + New Shortcut",
+                          my: "Shortcuts App သို့ဝင်ပြီး (+) New Shortcut ကို နှိပ်ပါ။",
+                        },
+                        {
+                          en: 'Add "Record Audio" action (Tap to stop)',
+                          my: '"Record Audio" (အသံဖမ်းရန်) ကို ထည့်ပြီး Stop ကို "On Tap" သတ်မှတ်ပါ။',
+                        },
+                        {
+                          en: 'Add "Base64 Encode" action (Encode the Recorded Audio, Line Breaks: None)',
+                          my: '"Base64 Encode" ကို ထည့်ပြီး Record လုပ်ထားသော အသံကို ရွေးချယ်ပါ။ Line Breaks ကို None ထားပါ။',
+                        },
+                        {
+                          en: 'Add "Get Contents of URL" action',
+                          my: '"Get Contents of URL" ကို အောက်တွင် ထပ်ထည့်ပါ။',
+                        },
+                        {
+                          en: "Set URL to: https://your-domain.com/api/v1/process",
+                          my: "URL နေရာတွင် သင့်ဒိုမိန်း (ဥပမာ - your-domain.com/api/v1/process) ကို ထည့်ပါ။",
+                        },
+                        {
+                          en: "Method: POST",
+                          my: "Method ကို POST သို့ ပြောင်းပါ။",
+                        },
+                        {
+                          en: "Headers: Add 'Authorization' → 'Bearer YOUR_KEY'",
+                          my: "Headers ထဲတွင် Key ကို 'Authorization' အမည်ပေးပြီး 'Bearer YOUR_KEY' ကို ထည့်ပါ။",
+                        },
+                        {
+                          en: 'Request Body: JSON → Add Text "mode" : "polish", Add Text "audioBase64" : [Base64 Encoded Variable]',
+                          my: 'Request Body ကို JSON ပြောင်းပါ။ "mode" နေရာ၌ "polish" ကို ထည့်ပါ။ "audioBase64" နေရာ၌ အထက်မှ "Base64 Encoded" (ရလဒ်) ကို ထည့်ပါ။',
+                        },
+                        {
+                          en: 'Add "Get Dictionary Value" → Get value for "result.refined_text" in Contents of URL',
+                          my: '"Get Dictionary Value" ကို ထည့်ပြီး "result.refined_text" ကို ထုတ်ယူပါ။',
+                        },
+                        {
+                          en: 'Add "Show Result" or "Speak Text" action with the Dictionary Value',
+                          my: '"Show Result" သို့မဟုတ် "Speak Text" အသုံးပြု၍ ရလဒ်ကို ဖတ်ခိုင်းပါ (သို့) ပြသပါ။',
+                        },
                       ].map((step, i) => (
-                        <div key={i} className="flex items-start gap-2">
+                        <div key={i} className="flex items-start gap-3">
                           <span className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
                             {i + 1}
                           </span>
-                          <p className="text-xs text-neutral-600 dark:text-neutral-400">
-                            {step}
-                          </p>
+                          <div>
+                            <p className="text-xs text-neutral-800 dark:text-neutral-200 font-medium leading-relaxed">
+                              {step.en}
+                            </p>
+                            <p className="text-[11px] text-neutral-500 mt-0.5 leading-relaxed">
+                              {step.my}
+                            </p>
+                          </div>
                         </div>
                       ))}
                     </div>
