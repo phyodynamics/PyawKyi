@@ -52,31 +52,31 @@ const features = [
     icon: Sparkles,
     title: "Polish",
     description:
-      "သင့်စကားသံများကို ပြည့်စုံမှန်ကန်သော စာသားအဖြစ် ပြောင်းလဲပေးပါသည်။ Grammar နှင့် Punctuation မှားယွင်းမှုများကို အလိုအလျောက် ပြင်ဆင်ပေးသည်။",
+      "စကားပြောဆိုချက်တွေကို ဖတ်ရလွယ်ကူတဲ့ စာသားအဖြစ် ပြောင်းပေးပါတယ်။ Grammar နဲ့ သတ်ပုံအမှားတွေကိုပါ အလွယ်တကူ ပြင်ဆင်ပေးမှာပါ။",
   },
   {
     icon: ClipboardList,
     title: "Plan",
     description:
-      "သင်၏ အကြံဉာဏ်များကို စနစ်ကျသော Action Plan, Schedule နှင့် Checklist များအဖြစ် အသေးစိတ် ဖန်တီးစီစဉ်ပေးပါသည်။",
+      "စိတ်ကူးထဲရှိတဲ့ အကြောင်းအရာတွေကို Action Plan, Schedule နဲ့ Checklist တွေအဖြစ် အသေးစိတ် အစီအစဉ်ဆွဲပေးပါတယ်။",
   },
   {
     icon: Palette,
     title: "Craft",
     description:
-      "သင်၏ ပြောစကားများကို ဆွဲဆောင်မှုရှိသော Social Media Post များအဖြစ် ပြောင်းလဲပေးပါသည်။ သင့်လျော်သော Emoji နှင့် Hashtag များ အပါအဝင်ဖြစ်သည်။",
+      "သင်ပြောလိုက်တဲ့ စကားတွေကို လူကြိုက်များစေမယ့် Social Media Post တွေအဖြစ် Emoji, Hashtag တွေနဲ့တကွ ပြင်ဆင်ပေးပါတယ်။",
   },
   {
     icon: Code,
     title: "Build",
     description:
-      "သင်၏ App Idea ကို ပြောပြရုံဖြင့် အလုပ်လုပ်နိုင်သော Working HTML Prototype ကို ချက်ချင်း ရေးသားဖန်တီးပေးပါသည်။",
+      "App Idea တွေကို ပြောပြလိုက်ရုံနဲ့ အလုပ်လုပ်လို့ရတဲ့ HTML Code တွေကို ချက်ချင်း ရေးသားပေးမှာ ဖြစ်ပါတယ်။",
   },
   {
     icon: BookOpen,
     title: "Learn",
     description:
-      "ရှည်လျားသော အကြောင်းအရာများကို အလွယ်တကူ မှတ်သားလေ့လာနိုင်ရန် Study Notes, Key Concepts နှင့် Flashcards များ ဖန်တီးပေးပါသည်။",
+      "ရှည်လျားတဲ့ စာတွေကို အလွယ်တကူ မှတ်မိနိုင်အောင် Study Notes, Key Concepts တွေနဲ့ Flashcards တွေ ဖန်တီးပေးပါတယ်။",
   },
 ];
 
@@ -206,7 +206,7 @@ export default function WelcomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8, duration: 0.5 }}
             >
-              ပြောလိုက်ယုံပါပဲ · Just Say It
+              ပြောလိုက်ရုံပါပဲ · Just Say It
             </motion.p>
           </div>
 
@@ -217,9 +217,9 @@ export default function WelcomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1, duration: 0.5 }}
           >
-            သင့်အသံကို AI နည်းပညာဖြင့် အဆင့်မြင့် စာသားများ၊ စနစ်ကျသော Action
-            Plan များ၊ ဆွဲဆောင်မှုရှိသော ဆိုရှယ်မီဒီယာ ပို့စ်များနှင့်
-            အလုပ်လုပ်နိုင်သော ကုဒ်များအဖြစ် အတိကျဆုံး ပြောင်းလဲပေးပါသည်။
+            သင့်အသံကို AI ကနေတဆင့် သပ်ရပ်တဲ့ စာသားတွေ၊ စနစ်ကျတဲ့ Action Plan
+            တွေ၊ ဆွဲဆောင်မှုရှိတဲ့ Social Media ပို့စ်တွေနဲ့အတူ
+            အလုပ်လုပ်နိုင်တဲ့ Website Code တွေအဖြစ် အတိကျဆုံး ပြောင်းလဲပေးမှာပါ။
           </motion.p>
 
           {/* CTA Button with Google Logo */}
@@ -245,7 +245,8 @@ export default function WelcomePage() {
               {loading ? "Connecting..." : "Continue with Google"}
             </GradientSlideButton>
             <p className="text-xs text-neutral-400 text-center">
-              Account ဖန်တီးရန် အခမဲ့ · တစ်ကြိမ်ပေးချေ · တစ်သက်တာ
+              အကောင့်ဖွင့်ရန် အခမဲ့ · တစ်ကြိမ်ပေးသွင်းရုံဖြင့်
+              တစ်သက်တာအသုံးပြုနိုင်သည်
             </p>
           </motion.div>
 
