@@ -118,37 +118,41 @@ export default function Home() {
   // Staged loading: welcome → auth → credentials → ready
   useEffect(() => {
     const loadData = async () => {
-      // Stage 1: Welcome (shown immediately)
-      await new Promise((r) => setTimeout(r, 800));
+      try {
+        // Stage 1: Welcome (shown immediately)
+        await new Promise((r) => setTimeout(r, 800));
 
-      // Stage 2: Checking Authentication
-      setLoadingStage("auth");
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        // Stage 2: Checking Authentication
+        setLoadingStage("auth");
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (user) {
-        setUserName(
-          user.user_metadata?.full_name ||
-            user.user_metadata?.name ||
-            user.email ||
-            "",
-        );
-        setUserAvatar(user.user_metadata?.avatar_url || null);
-        setIsAdmin(user.email === "bababoi134459@gmail.com");
+        if (user) {
+          setUserName(
+            user.user_metadata?.full_name ||
+              user.user_metadata?.name ||
+              user.email ||
+              "",
+          );
+          setUserAvatar(user.user_metadata?.avatar_url || null);
+          setIsAdmin(user.email === "bababoi134459@gmail.com");
 
-        // Stage 3: Getting Credentials
-        setLoadingStage("credentials");
-        const { data } = await supabase
-          .from("saved_items")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-        if (data) setHistoryItems(data);
+          // Stage 3: Getting Credentials
+          setLoadingStage("credentials");
+          const { data } = await supabase
+            .from("saved_items")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false });
+          if (data) setHistoryItems(data);
+        }
+      } catch (err) {
+        console.error("Loading error:", err);
       }
 
-      // Stage 4: Ready
+      // Stage 4: Ready (always reach here)
       setLoadingStage("ready");
     };
     loadData();
@@ -422,57 +426,55 @@ export default function Home() {
       <main className="min-h-screen flex flex-col">
         {/* Header */}
         <motion.header
-          className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-4 md:px-6"
+          className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-3 py-3 sm:px-4 sm:py-4 md:px-6"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: showWelcome ? 0 : 1, y: showWelcome ? -20 : 0 }}
           transition={{ delay: 0.2, duration: 0.4 }}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <Image
               src="/pyaw_kyi.png"
               alt="Pyaw Kyi Logo"
               width={40}
               height={40}
-              className="w-8 h-8 sm:w-10 sm:h-10 object-contain"
+              className="w-7 h-7 sm:w-9 sm:h-9 object-contain"
               priority
             />
-            <span className="text-base sm:text-lg font-bold text-foreground">
-              Pyaw Kyi{" "}
-              <span className="font-normal text-muted-foreground">
+            <span className="text-sm sm:text-base font-bold text-foreground">
+              Pyaw Kyi
+              <span className="hidden sm:inline font-normal text-muted-foreground">
+                {" "}
                 (Just Say)
               </span>
             </span>
           </div>
-          <div className="relative flex items-center gap-2">
+          <div className="relative flex items-center gap-1 sm:gap-1.5">
             <motion.button
               onClick={() => setShowHistory(true)}
-              className="relative p-2.5 rounded-full bg-muted hover:bg-muted/80 transition-colors"
-              whileHover={{ scale: 1.05 }}
+              className="relative p-2 sm:p-2.5 rounded-full bg-muted hover:bg-muted/80 transition-colors"
               whileTap={{ scale: 0.95 }}
               aria-label="History"
             >
-              <History className="w-5 h-5 text-foreground" />
+              <History className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
               {historyItems.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-foreground text-background text-[10px] font-bold flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-foreground text-background text-[9px] sm:text-[10px] font-bold flex items-center justify-center">
                   {historyItems.length > 99 ? "99+" : historyItems.length}
                 </span>
               )}
             </motion.button>
             <motion.button
               onClick={() => setShowApiPanel(true)}
-              className="p-2.5 rounded-full bg-muted hover:bg-muted/80 transition-colors"
-              whileHover={{ scale: 1.05 }}
+              className="p-2 sm:p-2.5 rounded-full bg-muted hover:bg-muted/80 transition-colors"
               whileTap={{ scale: 0.95 }}
               aria-label="API"
             >
-              <Code2 className="w-5 h-5 text-foreground" />
+              <Code2 className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
             </motion.button>
             <NotificationPopup />
             <ThemeToggle />
             <motion.button
               onClick={() => setShowSettings(true)}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-muted overflow-hidden border border-border flex items-center justify-center transition-transform"
-              whileHover={{ scale: 1.05 }}
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-muted overflow-hidden border border-border flex items-center justify-center"
               whileTap={{ scale: 0.95 }}
               aria-label="User Settings"
             >
@@ -480,12 +482,12 @@ export default function Home() {
                 <Image
                   src={userAvatar}
                   alt={userName || "User profile"}
-                  width={40}
-                  height={40}
+                  width={36}
+                  height={36}
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="text-xs sm:text-sm font-bold text-muted-foreground">
+                <span className="text-xs font-bold text-muted-foreground">
                   {userName ? userName[0].toUpperCase() : "?"}
                 </span>
               )}

@@ -29,29 +29,37 @@ export function NotificationPopup() {
 
   // Load existing notifications
   const loadNotifications = useCallback(async () => {
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const { data } = await supabase
-      .from("notifications")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(20);
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20);
 
-    if (data) {
+      if (error || !data) return;
+
       setNotifications(data);
 
       // Check which ones are read (from localStorage)
-      const readIds = JSON.parse(
-        localStorage.getItem("pyawkyi_read_notifications") || "[]",
-      );
-      const unread = data.filter(
-        (n: Notification) => !readIds.includes(n.id),
-      ).length;
-      setUnreadCount(unread);
+      try {
+        const readIds = JSON.parse(
+          localStorage.getItem("pyawkyi_read_notifications") || "[]",
+        );
+        const unread = data.filter(
+          (n: Notification) => !readIds.includes(n.id),
+        ).length;
+        setUnreadCount(unread);
+      } catch {
+        setUnreadCount(data.length);
+      }
+    } catch {
+      // Notifications table might not exist yet — fail silently
     }
   }, []);
 
@@ -59,36 +67,57 @@ export function NotificationPopup() {
   useEffect(() => {
     loadNotifications();
 
-    const supabase = createClient();
-    const channel = supabase
-      .channel("notifications-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notifications",
-        },
-        (payload: { new: Record<string, unknown> }) => {
-          const newNotif = payload.new as unknown as Notification;
-          setNotifications((prev) => [newNotif, ...prev]);
-          setUnreadCount((prev) => prev + 1);
-          // Show toast popup
-          setToast(newNotif);
-          // Auto-dismiss toast after 6 seconds
-          setTimeout(() => setToast(null), 6000);
-        },
-      )
-      .subscribe();
+    let channel: ReturnType<ReturnType<typeof createClient>["channel"]> | null =
+      null;
+
+    try {
+      const supabase = createClient();
+      channel = supabase
+        .channel("notifications-realtime")
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notifications",
+          },
+          (payload: { new: Record<string, unknown> }) => {
+            const newNotif = payload.new as unknown as Notification;
+            setNotifications((prev) => [newNotif, ...prev]);
+            setUnreadCount((prev) => prev + 1);
+            // Show toast popup
+            setToast(newNotif);
+            // Auto-dismiss toast after 6 seconds
+            setTimeout(() => setToast(null), 6000);
+          },
+        )
+        .subscribe();
+    } catch {
+      // Realtime not available — fail silently
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        try {
+          const supabase = createClient();
+          supabase.removeChannel(channel);
+        } catch {
+          // ignore
+        }
+      }
     };
   }, [loadNotifications]);
 
   const markAllRead = useCallback(() => {
     const allIds = notifications.map((n) => n.id);
-    localStorage.setItem("pyawkyi_read_notifications", JSON.stringify(allIds));
+    try {
+      localStorage.setItem(
+        "pyawkyi_read_notifications",
+        JSON.stringify(allIds),
+      );
+    } catch {
+      // localStorage not available (e.g. Safari private mode)
+    }
     setUnreadCount(0);
   }, [notifications]);
 
@@ -124,12 +153,11 @@ export function NotificationPopup() {
       {/* Bell Icon Button */}
       <motion.button
         onClick={togglePanel}
-        className="relative p-2.5 rounded-full border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-950 transition-colors"
-        whileHover={{ scale: 1.05 }}
+        className="relative p-2 sm:p-2.5 rounded-full bg-muted hover:bg-muted/80 transition-colors"
         whileTap={{ scale: 0.95 }}
         aria-label="Notifications"
       >
-        <Bell className="w-4 h-4" />
+        <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
         {unreadCount > 0 && (
           <motion.span
             className="absolute -top-1 -right-1 w-4.5 h-4.5 min-w-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none px-1"

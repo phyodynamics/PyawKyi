@@ -56,7 +56,7 @@ export const ModeSelector = memo(function ModeSelector({
 }: ModeSelectorProps) {
   return (
     <motion.div
-      className="grid grid-cols-2 sm:flex sm:flex-wrap justify-center gap-2 sm:gap-3 w-full sm:w-auto"
+      className="flex flex-wrap justify-center gap-2 w-full sm:w-auto px-2 sm:px-0"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.2 }}
@@ -69,8 +69,8 @@ export const ModeSelector = memo(function ModeSelector({
             key={mode.id}
             onClick={() => onModeChange(mode.id)}
             className={`
-              relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 sm:py-2.5 md:px-5 md:py-3 rounded-full
-              font-medium text-xs sm:text-sm md:text-base transition-all duration-300
+              relative flex items-center justify-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 md:px-5 md:py-3 rounded-full
+              font-medium text-xs sm:text-sm transition-all duration-300
               ${
                 isActive
                   ? "bg-foreground text-background shadow-lg"
@@ -80,8 +80,7 @@ export const ModeSelector = memo(function ModeSelector({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.1 * index }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileTap={{ scale: 0.95 }}
           >
             {isActive && (
               <motion.div
@@ -95,7 +94,7 @@ export const ModeSelector = memo(function ModeSelector({
             >
               {React.isValidElement(mode.icon) &&
                 React.cloneElement(mode.icon as React.ReactElement<any>, {
-                  className: "w-4 h-4 sm:w-5 sm:h-5",
+                  className: "w-4 h-4",
                 })}
             </span>
             <span
