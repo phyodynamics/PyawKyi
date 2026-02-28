@@ -21,11 +21,87 @@ const TYPE_STYLES: Record<string, { bg: string; icon: string }> = {
   alert: { bg: "bg-red-500", icon: "⚠️" },
 };
 
+// Convert VAPID public key from base64url to Uint8Array
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 export function NotificationPopup() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [toast, setToast] = useState<Notification | null>(null);
   const [showPanel, setShowPanel] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushSupported, setPushSupported] = useState(false);
+
+  // Register service worker and subscribe to push
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+
+    setPushSupported(true);
+
+    const registerPush = async () => {
+      try {
+        const registration = await navigator.serviceWorker.register("/sw.js");
+        const existing = await registration.pushManager.getSubscription();
+        if (existing) {
+          setPushEnabled(true);
+          return;
+        }
+        // Check if permission was already granted
+        if (Notification.permission === "granted") {
+          await subscribeToPush(registration);
+        }
+      } catch {
+        // Service worker or push not available
+      }
+    };
+    registerPush();
+  }, []);
+
+  const subscribeToPush = async (registration: ServiceWorkerRegistration) => {
+    try {
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidKey) return;
+
+      const convertedKey = urlBase64ToUint8Array(vapidKey);
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: convertedKey.buffer as ArrayBuffer,
+      });
+
+      // Send subscription to server
+      await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription: subscription.toJSON() }),
+      });
+
+      setPushEnabled(true);
+    } catch {
+      // User denied or error
+    }
+  };
+
+  const handleEnablePush = async () => {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        const registration = await navigator.serviceWorker.ready;
+        await subscribeToPush(registration);
+      }
+    } catch {
+      // Permission denied
+    }
+  };
 
   // Load existing notifications
   const loadNotifications = useCallback(async () => {
@@ -240,6 +316,25 @@ export function NotificationPopup() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {/* Push notification enable/status */}
+              {pushSupported && (
+                <div className="sticky bottom-0 px-4 py-2.5 border-t border-neutral-100 dark:border-neutral-900 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-sm rounded-b-2xl">
+                  {pushEnabled ? (
+                    <div className="flex items-center gap-2 text-xs text-neutral-400">
+                      <span className="w-2 h-2 rounded-full bg-green-500" />
+                      Push notifications enabled
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleEnablePush}
+                      className="w-full py-2 rounded-lg bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity"
+                    >
+                      🔔 Enable Push Notifications
+                    </button>
+                  )}
                 </div>
               )}
             </motion.div>

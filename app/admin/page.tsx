@@ -159,16 +159,17 @@ export default function AdminPage() {
     if (!notiTitle.trim() || !notiMessage.trim()) return;
     setNotiSending(true);
     try {
-      await fetch("/api/admin", {
+      const res = await fetch("/api/push/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "send_notification",
           title: notiTitle.trim(),
           message: notiMessage.trim(),
           type: notiType,
         }),
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
       setNotiTitle("");
       setNotiMessage("");
       setNotiSent(true);
