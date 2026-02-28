@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Copy,
   Check,
-  Download,
+  Bookmark,
   RefreshCw,
   X,
   Send,
@@ -63,24 +63,6 @@ export function ResultDisplay({
     await navigator.clipboard.writeText(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleDownload = () => {
-    const extension =
-      mode === "build" ? "html" : mode === "plan" ? "json" : "txt";
-    const mimeType =
-      mode === "build"
-        ? "text/html"
-        : mode === "plan"
-          ? "application/json"
-          : "text/plain";
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pyawkyi-${mode}-${Date.now()}.${extension}`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   const handleRefineSubmit = async () => {
@@ -264,22 +246,12 @@ export function ResultDisplay({
         </motion.button>
 
         <motion.button
-          onClick={handleDownload}
-          className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full bg-muted hover:bg-muted/80 text-foreground text-xs sm:text-sm font-medium transition-colors"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          Download
-        </motion.button>
-
-        <motion.button
           onClick={onSave}
           className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full bg-muted hover:bg-muted/80 text-foreground text-xs sm:text-sm font-medium transition-colors"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
-          <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <Bookmark className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           Save
         </motion.button>
 
