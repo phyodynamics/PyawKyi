@@ -336,27 +336,27 @@ export function ApiKeyPanel({ isOpen, onClose }: ApiKeyPanelProps) {
                         {
                           mode: "polish",
                           title: "Polish",
-                          desc: "Clean up raw text, fix grammar, preserve meaning",
+                          desc: "Voice to Refined Text",
                         },
                         {
                           mode: "plan",
                           title: "Plan",
-                          desc: "Convert text into structured action plans & to-dos",
+                          desc: "Voice to Life Planner",
                         },
                         {
                           mode: "craft",
                           title: "Craft",
-                          desc: "Generate social media posts with hooks & CTAs",
+                          desc: "Voice to Content",
                         },
                         {
                           mode: "build",
                           title: "Build",
-                          desc: "Create HTML5 mini-apps from text descriptions",
+                          desc: "Voice to App",
                         },
                         {
                           mode: "learn",
                           title: "Learn",
-                          desc: "Generate study notes, key concepts & flashcards",
+                          desc: "Voice to Study Notes",
                         },
                       ].map(({ mode, title, desc }) => (
                         <div
