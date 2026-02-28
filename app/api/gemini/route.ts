@@ -97,15 +97,16 @@ async function callGeminiWithAudio(
 
   const parts: Array<
     { text: string } | { inline_data: { mime_type: string; data: string } }
-  > = [
-    { text: systemPrompt },
-    {
+  > = [{ text: systemPrompt }];
+
+  if (audioBase64) {
+    parts.push({
       inline_data: {
         mime_type: mimeType,
         data: audioBase64,
       },
-    },
-  ];
+    });
+  }
 
   // Add image if provided (for craft mode)
   if (imageBase64 && imageMimeType) {
@@ -292,7 +293,7 @@ export async function POST(request: NextRequest) {
       return errorResponse("Missing audio data.", 400);
     }
 
-    if (!isAudio && !userContent) {
+    if (!isAudio && !userContent && !imageBase64) {
       return errorResponse("Missing content.", 400);
     }
 

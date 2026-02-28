@@ -217,14 +217,23 @@ async function callGeminiWithAudio(
   mimeType: string,
   model: string,
   apiKey: string,
+  imageBase64?: string,
+  imageMimeType?: string,
 ): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const parts: Array<
     { text: string } | { inline_data: { mime_type: string; data: string } }
-  > = [
-    { text: systemPrompt },
-    { inline_data: { mime_type: mimeType, data: audioBase64 } },
-  ];
+  > = [{ text: systemPrompt }];
+
+  if (audioBase64) {
+    parts.push({ inline_data: { mime_type: mimeType, data: audioBase64 } });
+  }
+
+  if (imageBase64 && imageMimeType) {
+    parts.push({
+      inline_data: { mime_type: imageMimeType, data: imageBase64 },
+    });
+  }
 
   const response = await fetch(url, {
     method: "POST",
@@ -326,7 +335,8 @@ export async function POST(request: NextRequest) {
     return errorResponse("Invalid JSON body.", 400);
   }
 
-  const { mode, text, audioBase64, mimeType } = body;
+  const { mode, text, audioBase64, mimeType, imageBase64, imageMimeType } =
+    body;
 
   if (!mode || !["polish", "plan", "craft", "build", "learn"].includes(mode)) {
     return errorResponse(
@@ -335,8 +345,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!text && !audioBase64) {
-    return errorResponse('Missing "text" or "audioBase64".', 400);
+  if (!text && !audioBase64 && !imageBase64) {
+    return errorResponse(
+      'Missing "text", "audioBase64", or "imageBase64".',
+      400,
+    );
   }
 
   if (text && text.length > 50000) {
@@ -353,13 +366,15 @@ export async function POST(request: NextRequest) {
 
   for (const model of [primaryModel, fallbackModel]) {
     try {
-      if (audioBase64) {
+      if (audioBase64 || imageBase64) {
         result = await callGeminiWithAudio(
           systemPrompt,
-          audioBase64,
+          audioBase64 || "", // Fallback empty string if just sending an image
           mimeType || "audio/webm",
           model,
           userProfile.gemini_api_key,
+          imageBase64,
+          imageMimeType,
         );
       } else {
         result = await callGemini(
