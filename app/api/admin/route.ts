@@ -51,24 +51,33 @@ export async function GET(request: NextRequest) {
 
   const service = getServiceClient();
 
-  const [usersRes, subsRes, savedRes, apiKeysRes] = await Promise.all([
-    service.from("users").select("*").order("created_at", { ascending: false }),
-    service
-      .from("payment_submissions")
-      .select("*")
-      .order("created_at", { ascending: false }),
-    service.from("saved_items").select("user_id, mode, created_at"),
-    service
-      .from("api_keys")
-      .select("*")
-      .order("created_at", { ascending: false }),
-  ]);
+  const [usersRes, subsRes, savedRes, apiKeysRes, notifsRes] =
+    await Promise.all([
+      service
+        .from("users")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      service
+        .from("payment_submissions")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      service.from("saved_items").select("user_id, mode, created_at"),
+      service
+        .from("api_keys")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      service
+        .from("notifications")
+        .select("*")
+        .order("created_at", { ascending: false }),
+    ]);
 
   return NextResponse.json({
     users: usersRes.data || [],
     submissions: subsRes.data || [],
     savedItems: savedRes.data || [],
     apiKeys: apiKeysRes.data || [],
+    notifications: notifsRes.data || [],
   });
 }
 
@@ -169,6 +178,13 @@ export async function POST(request: NextRequest) {
         message,
         type: notifType,
       });
+      break;
+    }
+
+    case "delete_notification": {
+      const { notificationId } = body;
+      if (!notificationId) return errorResponse("Missing notification ID", 400);
+      await service.from("notifications").delete().eq("id", notificationId);
       break;
     }
 

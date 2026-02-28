@@ -68,6 +68,14 @@ interface ApiKeyRecord {
   is_active: boolean;
 }
 
+interface AdminNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  created_at: string;
+}
+
 const tabs: { id: Tab; label: string; icon: typeof ClipboardList }[] = [
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "forms", label: "Payments", icon: ClipboardList },
@@ -83,6 +91,7 @@ export default function AdminPage() {
   const [submissions, setSubmissions] = useState<PaymentSubmission[]>([]);
   const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKeyRecord[]>([]);
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -110,6 +119,7 @@ export default function AdminPage() {
       setSubmissions(data.submissions || []);
       setSavedItems(data.savedItems || []);
       setApiKeys(data.apiKeys || []);
+      setNotifications(data.notifications || []);
     } catch {
       setIsAdmin(false);
     }
@@ -143,6 +153,11 @@ export default function AdminPage() {
 
   const rejectSubmission = async (subId: string) => {
     await adminAction({ action: "reject_submission", submissionId: subId });
+  };
+
+  const deleteNotification = async (notificationId: string) => {
+    if (!confirm("Are you sure you want to delete this notification?")) return;
+    await adminAction({ action: "delete_notification", notificationId });
   };
 
   const deleteUser = async (userId: string) => {
@@ -1045,6 +1060,64 @@ export default function AdminPage() {
                       </>
                     )}
                   </motion.button>
+                </div>
+
+                {/* Recent Notifications History */}
+                <div className="mt-12 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-bold">Recent Notifications</h3>
+                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-neutral-100 dark:bg-neutral-900">
+                      {notifications.length} Total
+                    </span>
+                  </div>
+
+                  {notifications.length === 0 ? (
+                    <div className="text-center py-8 text-sm text-neutral-500 bg-neutral-50 dark:bg-neutral-900/50 rounded-xl border border-neutral-100 dark:border-neutral-800">
+                      No notifications sent yet.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {notifications.map((notif) => {
+                        const style = {
+                          info: { bg: "bg-blue-500", icon: "ℹ️" },
+                          update: { bg: "bg-green-500", icon: "🚀" },
+                          promo: { bg: "bg-purple-500", icon: "🎉" },
+                          alert: { bg: "bg-red-500", icon: "⚠️" },
+                        }[notif.type] || { bg: "bg-blue-500", icon: "ℹ️" };
+
+                        return (
+                          <div
+                            key={notif.id}
+                            className="flex items-start justify-between gap-4 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950"
+                          >
+                            <div className="flex items-start gap-3 min-w-0">
+                              <span className="text-xl shrink-0 mt-0.5">
+                                {style.icon}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold truncate">
+                                  {notif.title}
+                                </p>
+                                <p className="text-xs text-neutral-500 mt-1 line-clamp-2 leading-relaxed">
+                                  {notif.message}
+                                </p>
+                                <p className="text-[10px] text-neutral-400 mt-2 font-medium">
+                                  {new Date(notif.created_at).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => deleteNotification(notif.id)}
+                              className="p-2 shrink-0 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"
+                              title="Delete notification"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

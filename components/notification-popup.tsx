@@ -320,23 +320,26 @@ export function NotificationPopup() {
               )}
 
               {/* Push notification enable/status */}
-              {pushSupported && (
-                <div className="sticky bottom-0 px-4 py-3 border-t border-neutral-100 dark:border-neutral-900 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-sm rounded-b-2xl">
-                  {pushEnabled ? (
-                    <div className="flex items-center gap-2 text-xs text-neutral-400">
-                      <span className="w-2 h-2 rounded-full bg-green-500" />
-                      Push notifications enabled
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleEnablePush}
-                      className="w-full py-2.5 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity"
-                    >
-                      🔔 Enable Push Notifications
-                    </button>
-                  )}
-                </div>
-              )}
+              <div className="sticky bottom-0 px-4 py-3 border-t border-neutral-100 dark:border-neutral-900 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-sm rounded-b-2xl">
+                {!pushSupported ? (
+                  <div className="flex items-center gap-2 text-xs text-neutral-400">
+                    <span className="w-2 h-2 rounded-full bg-neutral-300 dark:bg-neutral-700" />
+                    Push notifications not supported in this browser
+                  </div>
+                ) : pushEnabled ? (
+                  <div className="flex items-center gap-2 text-xs text-neutral-400">
+                    <span className="w-2 h-2 rounded-full bg-green-500" />
+                    Push notifications enabled
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleEnablePush}
+                    className="w-full py-2.5 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity"
+                  >
+                    🔔 Enable Push Notifications
+                  </button>
+                )}
+              </div>
             </motion.div>
           </>
         )}
