@@ -39,6 +39,7 @@ export function ApiKeyPanel({ isOpen, onClose }: ApiKeyPanelProps) {
   const [copied, setCopied] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [activeSection, setActiveSection] = useState<"key" | "docs">("key");
+  const [docLanguage, setDocLanguage] = useState<"en" | "my">("en");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -429,65 +430,80 @@ export function ApiKeyPanel({ isOpen, onClose }: ApiKeyPanelProps) {
 
                   {/* Apple Shortcuts */}
                   <div>
-                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                      <Smartphone className="w-4 h-4 text-neutral-400" />
-                      Apple Shortcuts
-                    </h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold flex items-center gap-2">
+                        <Smartphone className="w-4 h-4 text-neutral-400" />
+                        Apple Shortcuts
+                      </h3>
+                      <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-neutral-900 rounded-lg">
+                        <button
+                          onClick={() => setDocLanguage("en")}
+                          className={`px-2 py-1 rounded text-[10px] font-bold uppercase transition-colors ${docLanguage === "en" ? "bg-white dark:bg-black text-black dark:text-white shadow-sm" : "text-neutral-500 hover:text-black dark:hover:text-white"}`}
+                        >
+                          EN
+                        </button>
+                        <button
+                          onClick={() => setDocLanguage("my")}
+                          className={`px-2 py-1 rounded text-[10px] font-bold uppercase transition-colors ${docLanguage === "my" ? "bg-white dark:bg-black text-black dark:text-white shadow-sm" : "text-neutral-500 hover:text-black dark:hover:text-white"}`}
+                        >
+                          ျမန္မာ
+                        </button>
+                      </div>
+                    </div>
                     <div className="space-y-3">
                       {[
                         {
                           en: "Open Shortcuts app → + New Shortcut",
-                          my: "Shortcuts App သို့ဝင်ပြီး (+) New Shortcut ကို နှိပ်ပါ။",
+                          my: "Shortcuts App ထဲဝင်ပြီး (+) New Shortcut အသစ်တစ်ခု ယူပါ။",
                         },
                         {
                           en: 'Add "Record Audio" action (Tap to stop)',
-                          my: '"Record Audio" (အသံဖမ်းရန်) ကို ထည့်ပြီး Stop ကို "On Tap" သတ်မှတ်ပါ။',
+                          my: '"Record Audio" ကို ထည့်ပြီး ဖမ်းခြင်းရပ်ရန် On Tap ကို ရွေးချယ်ပေးပါ။',
                         },
                         {
                           en: 'Add "Base64 Encode" action (Encode the Recorded Audio, Line Breaks: None)',
-                          my: '"Base64 Encode" ကို ထည့်ပြီး Record လုပ်ထားသော အသံကို ရွေးချယ်ပါ။ Line Breaks ကို None ထားပါ။',
+                          my: '"Base64 Encode" ကို ထည့်ပြီး Record Audio မှရလာတဲ့ အသံဖိုင်ကို ရွေးပါ။ Line Breaks ကို None လုပ်ပေးပါ။',
                         },
                         {
-                          en: 'Add "Get Contents of URL" action',
-                          my: '"Get Contents of URL" ကို အောက်တွင် ထပ်ထည့်ပါ။',
+                          en: 'Add a "Text" action immediately. Inside, type: { "mode": "polish", "audioBase64": "[Insert Base64 Encoded Variable Here]" }',
+                          my: 'အောက်တွင် "Text" (စာသား) action တစ်ခု ထည့်ပြီး ၎င်းထဲတွင် အောက်ပါတိုင်း ရိုက်ထည့်ပါ။ { "mode": "polish", "audioBase64": "[Base64 Variable ကို ဤနေရာ၌ ရွေးထည့်ပါ]" }',
                         },
                         {
-                          en: "Set URL to: https://your-domain.com/api/v1/process",
-                          my: "URL နေရာတွင် သင့်ဒိုမိန်း (ဥပမာ - your-domain.com/api/v1/process) ကို ထည့်ပါ။",
+                          en: 'Add "Get Contents of URL" action below Text.',
+                          my: 'ထို Text ၏ အောက်တွင် "Get Contents of URL" action ကို ထပ်ထည့်ပါ။',
                         },
                         {
-                          en: "Method: POST",
-                          my: "Method ကို POST သို့ ပြောင်းပါ။",
+                          en: "Set URL to: https://pyawkyi.phyozinko.com/api/v1/process",
+                          my: "URL နေရာတွင် https://pyawkyi.phyozinko.com/api/v1/process ကို ဖြည့်ပါ။",
                         },
                         {
-                          en: "Headers: Add 'Authorization' → 'Bearer YOUR_KEY'",
-                          my: "Headers ထဲတွင် Key ကို 'Authorization' အမည်ပေးပြီး 'Bearer YOUR_KEY' ကို ထည့်ပါ။",
+                          en: "Method: POST | Headers: Add 'Authorization' → 'Bearer YOUR_KEY'",
+                          my: "Method ကို POST ပြောင်းပါ။ Headers တွင် Key ကို 'Authorization' အမည်ပေးပြီး တန်ဖိုးကို 'Bearer YOUR_KEY' ထည့်ပါ။",
                         },
                         {
-                          en: 'Request Body: JSON → Add Text "mode" : "polish", Add Text "audioBase64" : [Base64 Encoded Variable]',
-                          my: 'Request Body ကို JSON ပြောင်းပါ။ "mode" နေရာ၌ "polish" ကို ထည့်ပါ။ "audioBase64" နေရာ၌ အထက်မှ "Base64 Encoded" (ရလဒ်) ကို ထည့်ပါ။',
+                          en: "Headers: Add 'Content-Type' → 'application/json'",
+                          my: "Headers တွင် နောက်ထပ်တစ်ခုအနေဖြင့် Key ကို 'Content-Type' ပေးပြီး 'application/json' ထည့်ပါ။",
+                        },
+                        {
+                          en: "Request Body: FILE → Tap 'Choose Variable' -> Tap 'Select Variable' at the top -> Tap the 'Text' output from the step above.",
+                          my: "Request Body ကို 'File' (ဖိုင်) သို့ပြောင်းပါ။ ပြီးလျှင် ဘေးနားမှ 'Choose Variable' ကို နှိပ်ပြီး အပေါ်ဆုံးမှ 'Select Variable' မှတစ်ဆင့် အထက်၌ ရေးခဲ့သော 'Text' (စာသား) ကို နှိပ်ပြီး ရွေးချယ်ပေးလိုက်ပါ။",
                         },
                         {
                           en: 'Add "Get Dictionary Value" → Get value for "result.refined_text" in Contents of URL',
-                          my: '"Get Dictionary Value" ကို ထည့်ပြီး "result.refined_text" ကို ထုတ်ယူပါ။',
+                          my: '"Get Dictionary Value" ခေါ်ပြီး URL မှ ပြန်လာသော Contents ထဲမှ "result.refined_text" ကို ထုတ်ယူပါ။',
                         },
                         {
                           en: 'Add "Show Result" or "Speak Text" action with the Dictionary Value',
-                          my: '"Show Result" သို့မဟုတ် "Speak Text" အသုံးပြု၍ ရလဒ်ကို ဖတ်ခိုင်းပါ (သို့) ပြသပါ။',
+                          my: 'အဖြေကို ပြန်ဖတ်ပြချင်ပါက "Speak Text" သို့မဟုတ် မျက်နှာပြင်တွင် ကြည့်ချင်ပါက "Show Result" ထည့်ပြီး အဖြေကို ရွေးချယ်ပါ။',
                         },
                       ].map((step, i) => (
                         <div key={i} className="flex items-start gap-3">
                           <span className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
                             {i + 1}
                           </span>
-                          <div>
-                            <p className="text-xs text-neutral-800 dark:text-neutral-200 font-medium leading-relaxed">
-                              {step.en}
-                            </p>
-                            <p className="text-[11px] text-neutral-500 mt-0.5 leading-relaxed">
-                              {step.my}
-                            </p>
-                          </div>
+                          <p className="text-xs text-neutral-800 dark:text-neutral-200 mt-1">
+                            {docLanguage === "en" ? step.en : step.my}
+                          </p>
                         </div>
                       ))}
                     </div>
