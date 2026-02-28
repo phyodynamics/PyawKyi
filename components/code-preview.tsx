@@ -118,10 +118,21 @@ export function CodePreview({ code }: CodePreviewProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [isFullscreen]);
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setIsLoading(true);
     setHasError(false);
-    setKey((k) => k + 1);
+
+    // Changing the key forces a complete re-mount of the iframe,
+    // but if it's currently rendered inside the portal,
+    // the unmounting can cause React invariant errors and crash.
+    // Instead of remounting the entire iframe, let's just reload its content smoothly
+    const iframe = iframeRef.current;
+    if (iframe) {
+      iframe.src = iframe.src; // Triggers a reload without unmounting the element
+    } else {
+      setKey((k) => k + 1); // Fallback
+    }
   }, []);
 
   // Render the loading/error overlay
