@@ -1,8 +1,9 @@
 "use client";
 
+import { memo } from "react";
 import { motion } from "framer-motion";
 
-export function Footer() {
+export const Footer = memo(function Footer() {
   return (
     <motion.footer
       className="w-full py-4 text-center mt-auto shrink-0"
@@ -23,4 +24,4 @@ export function Footer() {
       </p>
     </motion.footer>
   );
-}
+});

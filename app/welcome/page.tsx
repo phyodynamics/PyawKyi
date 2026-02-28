@@ -52,31 +52,31 @@ const features = [
     icon: Sparkles,
     title: "Polish",
     description:
-      "သင့်အသံကို ပြည့်စုံသော စာသားအဖြစ် ပြောင်းလဲပေးပါတယ်။ Grammar, punctuation အားလုံး ပြင်ပေးပါတယ်။",
+      "သင့်စကားသံများကို ပြည့်စုံမှန်ကန်သော စာသားအဖြစ် ပြောင်းလဲပေးပါသည်။ Grammar နှင့် Punctuation မှားယွင်းမှုများကို အလိုအလျောက် ပြင်ဆင်ပေးသည်။",
   },
   {
     icon: ClipboardList,
     title: "Plan",
     description:
-      "သင်ပြောလိုက်တဲ့ အကြံဥာဏ်ကို Action Plan, Schedule, Checklist အဖြစ် စီစဉ်ပေးပါတယ်။",
+      "သင်၏ အကြံဉာဏ်များကို စနစ်ကျသော Action Plan, Schedule နှင့် Checklist များအဖြစ် အသေးစိတ် ဖန်တီးစီစဉ်ပေးပါသည်။",
   },
   {
     icon: Palette,
     title: "Craft",
     description:
-      "Social media post များကို professional ဆန်ဆန် ဖန်တီးပေးပါတယ်။ Emoji, hashtag အပြည့်အစုံပါပါတယ်။",
+      "သင်၏ ပြောစကားများကို ဆွဲဆောင်မှုရှိသော Social Media Post များအဖြစ် ပြောင်းလဲပေးပါသည်။ သင့်လျော်သော Emoji နှင့် Hashtag များ အပါအဝင်ဖြစ်သည်။",
   },
   {
     icon: Code,
     title: "Build",
     description:
-      "သင့်အသံနဲ့ app idea ကို ပြောလိုက်ယုံပါပဲ။ Working HTML prototype ရရှိပါမယ်။",
+      "သင်၏ App Idea ကို ပြောပြရုံဖြင့် အလုပ်လုပ်နိုင်သော Working HTML Prototype ကို ချက်ချင်း ရေးသားဖန်တီးပေးပါသည်။",
   },
   {
     icon: BookOpen,
     title: "Learn",
     description:
-      "သင်လေ့လာနေတဲ့ အကြောင်းအရာကို ပြောလိုက်ယုံပါပဲ။ Study Notes, Key Concepts, Flashcards ရရှိပါမယ်။",
+      "ရှည်လျားသော အကြောင်းအရာများကို အလွယ်တကူ မှတ်သားလေ့လာနိုင်ရန် Study Notes, Key Concepts နှင့် Flashcards များ ဖန်တီးပေးပါသည်။",
   },
 ];
 
@@ -112,8 +112,8 @@ export default function WelcomePage() {
 
       if (data) {
         const realAvatars = data
-          .filter((u) => u.avatar_url)
-          .map((u) => ({
+          .filter((u: any) => u.avatar_url)
+          .map((u: any) => ({
             src: u.avatar_url!,
             alt: u.name || "User",
           }));
@@ -216,8 +216,9 @@ export default function WelcomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1, duration: 0.5 }}
           >
-            သင့်အသံကို AI နဲ့ polished text, action plan, social media post,
-            working code အဖြစ် ပြောင်းလဲပေးတဲ့ tool
+            သင့်အသံကို AI နည်းပညာဖြင့် အဆင့်မြင့် စာသားများ၊ စနစ်ကျသော Action
+            Plan များ၊ ဆွဲဆောင်မှုရှိသော ဆိုရှယ်မီဒီယာ ပို့စ်များနှင့်
+            အလုပ်လုပ်နိုင်သော ကုဒ်များအဖြစ် အတိကျဆုံး ပြောင်းလဲပေးပါသည်။
           </motion.p>
 
           {/* CTA Button with Google Logo */}

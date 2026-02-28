@@ -101,7 +101,7 @@ export function UserSettings({
       if (items) {
         const modeCount = { polish: 0, plan: 0, craft: 0, build: 0, learn: 0 };
         let totalWords = 0;
-        items.forEach((item) => {
+        items.forEach((item: any) => {
           if (item.mode in modeCount) {
             modeCount[item.mode as keyof typeof modeCount]++;
           }

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { memo } from "react";
 
 import { motion } from "framer-motion";
 import { Sparkles, CalendarDays, PenTool, Code2, BookOpen } from "lucide-react";
@@ -50,7 +50,10 @@ const modes: {
   },
 ];
 
-export function ModeSelector({ currentMode, onModeChange }: ModeSelectorProps) {
+export const ModeSelector = memo(function ModeSelector({
+  currentMode,
+  onModeChange,
+}: ModeSelectorProps) {
   return (
     <motion.div
       className="grid grid-cols-2 sm:flex sm:flex-wrap justify-center gap-2 sm:gap-3 w-full sm:w-auto"
@@ -105,7 +108,7 @@ export function ModeSelector({ currentMode, onModeChange }: ModeSelectorProps) {
       })}
     </motion.div>
   );
-}
+});
 
 export function getModeDescription(mode: Mode): string {
   return modes.find((m) => m.id === mode)?.description || "";

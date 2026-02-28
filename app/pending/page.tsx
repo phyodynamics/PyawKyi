@@ -15,42 +15,42 @@ type Step = "intro" | "form" | "payment" | "waiting";
 const reviews = [
   {
     name: "Khant Si Thu",
-    text: "Pyaw Kyi က အရမ်းအဆင်ပြေတယ်။ Voice ကနေ text ပြောင်းတာ မြန်ပြီး တိကျတယ်။",
+    text: "Pyaw Kyi က အရမ်းအသုံးဝင်ပါတယ်။ Voice ကနေ Text ကို ပြောင်းတဲ့အခါမှာ မြန်ဆန်ပြီး တိကျမှုအားကောင်းပါတယ်။",
     stars: 5,
   },
   {
     name: "Su Myat Noe",
-    text: "Social media post တွေရေးရတာ အရင်ကထက် အများကြီးလွယ်သွားတယ်။ Craft mode ကို အရမ်းကြိုက်တယ်။",
+    text: "Social Media Post များ ရေးသားရသည်မှာ ယခင်ကထက် များစွာ လွယ်ကူသွားပါသည်။ Craft Mode ကို အထူး နှစ်သက်မိပါသည်။",
     stars: 5,
   },
   {
     name: "Ye Min Aung",
-    text: "Plan mode နဲ့ schedule ဆွဲလိုက်တိုင်း အလုပ်တွေ organize ဖြစ်သွားတယ်။ 👌",
+    text: "Plan Mode ဖြင့် Schedule များ စီစဉ်လိုက်တိုင်း လုပ်ငန်းဆောင်တာများ ပိုမို စနစ်ကျလာပါသည်။ 👌",
     stars: 5,
   },
   {
     name: "Hnin Wai Phyo",
-    text: "Build mode ကနေ mini app တော်တော်များများ ဖန်တီးလို့ရတယ်။ Developer မဟုတ်ပေမယ့် app လုပ်လို့ရတယ်။",
+    text: "Build Mode အသုံးပြု၍ Mini App များစွာကို လွယ်ကူစွာ ဖန်တီးနိုင်ပါသည်။ Developer မဟုတ်သော်လည်း App များ ဖန်တီးနိုင်လာပါသည်။",
     stars: 4,
   },
   {
     name: "Aung Ko Min",
-    text: "20,000 MMK နဲ့ lifetime access ရတာ တကယ်တန်ဖိုးရှိတယ်။ ကျေနပ်ပါတယ်။",
+    text: "၂၀,၀၀၀ ကျပ်ဖြင့် Lifetime Access ရရှိခြင်းမှာ အလွန်တန်ဖိုးရှိပါသည်။ အသုံးပြုရသည်မှာလည်း အလွန် ကျေနပ်စရာကောင်းပါသည်။",
     stars: 5,
   },
   {
     name: "Thida Kyaw",
-    text: "မြန်မာလို ပြောလို့ရတာ အကောင်းဆုံးပဲ။ English ရော Myanmar ရော ရောပြောလို့ ရတယ်။",
+    text: "မြန်မာဘာသာဖြင့် ပြောဆိုနိုင်ခြင်းမှာ အကောင်းဆုံးပါပဲ။ English နှင့် Myanmar နှစ်မျိုးလုံး ရောနှောပြောဆို၍လည်း အဆင်ပြေပါသည်။",
     stars: 5,
   },
   {
     name: "Zaw Lin Htun",
-    text: "Polish mode က meeting notes တွေ clean up လုပ်ဖို့ perfect ပဲ။ တကယ်အသုံးဝင်တယ်။",
+    text: "Polish Mode သည် Meeting Notes များကို သပ်ရပ်စွာ ပြင်ဆင်ရန် အသင့်တော်ဆုံးပါပဲ။ လက်တွေ့တွင် အလွန် အသုံးဝင်ပါသည်။",
     stars: 4,
   },
   {
     name: "Ei Mon Kyaw",
-    text: "Voice to App feature က amazing ပဲ။ ပြောလိုက်ရုံနဲ့ website ထွက်လာတယ်။ 🚀",
+    text: "Voice to App လုပ်ဆောင်ချက်မှာ အလွန် အံ့ဩဖွယ်ကောင်းပါသည်။ စကားပြောလိုက်ရုံဖြင့် Website တစ်ခု ချက်ချင်း ထွက်ပေါ်လာပါသည်။ 🚀",
     stars: 5,
   },
 ];
@@ -249,7 +249,7 @@ export default function PendingPage() {
                   initial="hidden"
                   animate="visible"
                 >
-                  Unlock Pyaw Kyi
+                  Unlock the Full Power of Pyaw Kyi
                 </motion.h1>
                 <motion.p
                   className="text-neutral-500 text-sm sm:text-base max-w-sm mx-auto"
@@ -258,8 +258,8 @@ export default function PendingPage() {
                   initial="hidden"
                   animate="visible"
                 >
-                  Get lifetime access to all features — Polish, Plan, Craft,
-                  Build, and Learn — with a single payment.
+                  Get lifetime access to all premium features — Polish, Plan,
+                  Craft, Build, and Learn — with a single one-time payment.
                 </motion.p>
               </div>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { motion } from "framer-motion";
 import { Mic, Square, Pause, Play, Loader2 } from "lucide-react";
 import { formatDuration } from "@/lib/audio-utils";
@@ -15,7 +16,7 @@ interface RecordButtonProps {
   onResume: () => void;
 }
 
-export function RecordButton({
+export const RecordButton = memo(function RecordButton({
   isRecording,
   isPaused,
   isProcessing,
@@ -130,4 +131,4 @@ export function RecordButton({
       <p className="text-sm text-muted-foreground">Tap to start recording</p>
     </motion.div>
   );
-}
+});

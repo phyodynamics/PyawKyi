@@ -274,6 +274,16 @@ export default function Home() {
     [result, currentMode, isOnline, showError],
   );
 
+  const handleModeChange = useCallback(
+    (mode: Mode) => {
+      if (!isRecording && !isProcessing) {
+        setCurrentMode(mode);
+        if (mode !== "craft") setCraftImage(null);
+      }
+    },
+    [isRecording, isProcessing],
+  );
+
   const handleReset = useCallback(() => {
     setResult(null);
     setError(null);
@@ -290,6 +300,7 @@ export default function Home() {
     else if ("generated_content" in result) content = result.generated_content;
     else if ("fixed_code" in result)
       content = result.fixed_code || result.html_code;
+    else if ("study_title" in result) content = JSON.stringify(result, null, 2);
 
     const supabase = createClient();
     const {
@@ -542,12 +553,7 @@ export default function Home() {
                 {/* Mode selector */}
                 <ModeSelector
                   currentMode={currentMode}
-                  onModeChange={(mode) => {
-                    if (!isRecording && !isProcessing) {
-                      setCurrentMode(mode);
-                      if (mode !== "craft") setCraftImage(null);
-                    }
-                  }}
+                  onModeChange={handleModeChange}
                 />
               </motion.div>
             )}
