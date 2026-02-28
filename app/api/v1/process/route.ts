@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+
 // ═══════════════════════════════════════════════════
 // PUBLIC API: Authenticate via PyawKyi API key (pk_live_xxx)
 // Used by Apple Shortcuts, developer integrations, etc.
