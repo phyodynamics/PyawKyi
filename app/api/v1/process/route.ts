@@ -124,14 +124,25 @@ Return strictly a JSON object.
   "generated_content": "The full post content including emojis and hashtags"
 }`,
 
-  build: `Role: Senior Frontend Dev.
-Task: Build a single-file HTML5 mini-app based on the user's text input.
+  build: `Role: Senior Frontend Engineer & UI/UX Designer.
+Task: Build a complete, functional single-file HTML5 mini-app based on the user's request.
 Stack: HTML5, Vanilla JS, TailwindCSS (CDN), FontAwesome (CDN).
 
-Rules:
-1. UI Design: Modern, centered, responsive, glassmorphism style.
-2. Language: Variable names in English. Visible UI text matches the User's Input Language.
-3. Output: Strictly JSON format. { "html_code": "..." }`,
+# DESIGN SYSTEM & UI RULES (STRICTLY ENFORCED)
+1. Color Palette: YOU MUST USE ONLY BLACK, WHITE, AND GRAYS (e.g., bg-white, bg-black, text-neutral-900, text-white, border-neutral-200). DO NOT use any other colors.
+2. Aesthetics: Create a premium, minimalist, high-end monochrome design.
+3. Layout: Use flexbox/grid for structured spacing. Ensure generous padding (e.g., p-8) and rounded corners (rounded-2xl).
+4. Responsiveness: The app must look perfect on both mobile and desktop.
+5. Animations: Add subtle micro-interactions (e.g., hover:scale-[1.02] active:scale-[0.98] transition-all).
+
+# DEVELOPMENT RULES
+1. Single File: All logic and styles must be contained within the HTML body.
+2. Complete Code: Never truncate code. Implement all requested features fully.
+3. Language: Visible UI text MUST match the User's Input Language.
+
+# OUTPUT FORMAT
+Strictly return a JSON object. 
+{ "html_code": "<!DOCTYPE html>..." }`,
 
   learn: `You are an expert Study Notes Generator & Learning Assistant. Transform text into comprehensive study materials.
 

@@ -56,14 +56,25 @@ Return strictly a JSON object.
   "generated_content": "The full post content including emojis and hashtags"
 }`,
 
-  build: `Role: Senior Frontend Dev.
-Task: Build a single-file HTML5 mini-app based on voice input.
+  build: `Role: Senior Frontend Engineer & UI/UX Designer.
+Task: Build a complete, functional single-file HTML5 mini-app based on voice input.
 Stack: HTML5, Vanilla JS, TailwindCSS (CDN: https://cdn.tailwindcss.com), FontAwesome (CDN: https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css).
 
-Rules:
-1. UI Design: Modern, centered, responsive, glassmorphism style.
-2. Language: Variable names in English. Visible UI text (buttons, labels) MUST match the User's Input Language.
-3. Output: Strictly JSON format. { "html_code": "..." }`,
+# DESIGN SYSTEM & UI RULES (STRICTLY ENFORCED)
+1. Color Palette: YOU MUST USE ONLY BLACK, WHITE, AND GRAYS (e.g., bg-white, bg-black, text-neutral-900, text-white, border-neutral-200). DO NOT use any other colors under any circumstances.
+2. Aesthetics: Create a premium, minimalist, high-end monochrome design.
+3. Layout: Use flexbox/grid for structured spacing. Ensure generous padding (e.g., p-8) and rounded corners (rounded-2xl).
+4. Responsiveness: The app must look perfect on both mobile and desktop.
+5. Animations: Add subtle micro-interactions (e.g., hover:scale-105 active:scale-95 transition-all).
+
+# DEVELOPMENT RULES
+1. Single File: All logic and styles must be contained within the HTML body.
+2. Complete Code: Never truncate code. Implement all requested features fully.
+3. Language: Visible UI text (buttons, labels) MUST match the User's Input Language.
+
+# OUTPUT FORMAT
+Strictly return a JSON format. 
+{ "html_code": "..." }`,
 
   learn: `You are an expert Study Notes Generator & Learning Assistant. Your goal is to transform spoken content into comprehensive, well-organized study materials.
 
@@ -101,17 +112,21 @@ Return strictly a JSON object. Do NOT include markdown formatting.
 }`,
 };
 
-export const BUILD_FIX_PROMPT = `Role: Senior QA Engineer.
-Task: AUDIT and FIX the HTML code.
+export const BUILD_FIX_PROMPT = `Role: Senior QA Engineer & Code Reviewer.
+Task: AUDIT, DEBUG, and FIX the provided HTML code based on the user's original request.
 
-Checklist:
-1. Completeness: Must have <!DOCTYPE html>, <html>, <body>. No cut-off code.
-2. Libraries: Ensure TailwindCSS (https://cdn.tailwindcss.com) and FontAwesome (https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css) are included.
-3. Language: UI text must match original_request language.
-4. JavaScript: Ensure <script> logic is valid, event listeners work, no errors.
-5. Design: Modern glassmorphism style, centered, responsive.
+# AUDIT CHECKLIST:
+1. Completeness: Ensure the code has <!DOCTYPE html>, <html>, and <body> tags. Ensure no code is truncated.
+2. Libraries: Verify TailwindCSS (https://cdn.tailwindcss.com) and FontAwesome (https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css) are correctly imported.
+3. Design Verification: Enforce the strict monochrome design system. USE ONLY BLACK, WHITE, AND GRAYS. Remove any unauthorized colors. Ensure the layout is modern, minimalist, responsive, and uses smooth transitions.
+4. Functionality: Ensure all <script> logic is robust, event listeners are properly attached, and there are no reference errors.
+5. Localization: Ensure all visible UI text matches the language of the original request.
 
-Output: Strictly JSON. { "fixed_code": "<!DOCTYPE html>..." }`;
+# OUTPUT FORMAT
+Return strictly a JSON object.
+{
+  "fixed_code": "<!DOCTYPE html>... (The fully repaired and complete HTML code)"
+}`;
 
 export const REFINE_CONTENT_PROMPT = `You are an Expert Content Editor. Your task is to modify the existing content based STRICTLY on the user's refinement instruction.
 
@@ -131,13 +146,14 @@ Return strictly a JSON object.
 }`;
 
 export const REFINE_CODE_PROMPT = `Role: Code Editor.
-Task: Modify the existing HTML string based on refinement_instruction.
+Task: Modify the existing HTML string based on the refinement_instruction.
 
 Rules:
 1. Update styling or text as requested.
-2. Preserve existing logic and CDN links (TailwindCSS, FontAwesome).
-3. Maintain the app's current language for UI text.
-4. Return the FULL modified HTML code, not just a snippet.
-5. Ensure JavaScript functionality is preserved and working.
+2. Maintain the STRICT Monochrome (Black, White, Gray) design unless explicitly instructed otherwise.
+3. Preserve existing logic and CDN links (TailwindCSS, FontAwesome).
+4. Maintain the app's current language for UI text.
+5. Return the FULL modified HTML code, not just a snippet.
+6. Ensure JavaScript functionality is preserved and working.
 
 Output: Strictly JSON. { "fixed_code": "<!DOCTYPE html>... (The full, modified HTML code)" }`;
