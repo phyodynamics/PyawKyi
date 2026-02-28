@@ -372,8 +372,8 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* Search (hidden on analytics) */}
-        {activeTab !== "analytics" && (
+        {/* Search (hidden on analytics and notify tabs) */}
+        {activeTab !== "analytics" && activeTab !== "notify" && (
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
             <input
