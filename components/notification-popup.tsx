@@ -44,7 +44,7 @@ export function NotificationPopup() {
   // Register service worker and subscribe to push
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    if (!("serviceWorker" in navigator) || !("Notification" in window)) return;
 
     setPushSupported(true);
 
@@ -75,7 +75,7 @@ export function NotificationPopup() {
       const convertedKey = urlBase64ToUint8Array(vapidKey);
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: convertedKey.buffer as ArrayBuffer,
+        applicationServerKey: convertedKey as any,
       });
 
       // Send subscription to server
