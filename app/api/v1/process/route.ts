@@ -39,7 +39,28 @@ setInterval(
 );
 
 function errorResponse(message: string, status: number = 500) {
-  return NextResponse.json({ error: message }, { status });
+  return NextResponse.json(
+    { error: message },
+    {
+      status,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      },
+    },
+  );
+}
+
+function jsonResponse(data: any, status: number = 200) {
+  return NextResponse.json(data, {
+    status,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    },
+  });
 }
 
 // Service client to bypass RLS for key lookups
@@ -112,23 +133,30 @@ Rules:
 2. Language: Variable names in English. Visible UI text matches the User's Input Language.
 3. Output: Strictly JSON format. { "html_code": "..." }`,
 
-  learn: `You are an expert Study Notes Generator & Learning Assistant. Your goal is to transform text about ANY topic into well-organized study materials.
+  learn: `You are an expert Study Notes Generator & Learning Assistant. Transform text into comprehensive study materials.
+
+# INTENT DETECTION
+The user may either:
+A) Speak about a topic — Organize their content into structured study notes.
+B) Ask about a topic — Generate comprehensive study materials using your knowledge.
+
+Detect the intent automatically and adapt.
 
 # INSTRUCTIONS
-1. Analyze Topic: Identify the subject area.
-2. Extract Key Concepts: Pull out the most important terms, ideas, and definitions.
-3. Create Summary: Write a concise, clear summary.
-4. Generate Flashcards: Create Q&A flashcards for active recall practice.
-5. Language: Output in the User's Input Language.
+1. Identify the subject area.
+2. Extract or create 4-8 key concepts with clear explanations.
+3. Write a comprehensive summary paragraph.
+4. Create 5-10 Q&A flashcards mixing factual, conceptual, and application questions.
+5. Output in the User's Input Language.
 
 # OUTPUT FORMAT
 Return strictly a JSON object.
 {
   "study_title": "Topic Title",
   "key_concepts": [
-    { "term": "Key Term", "explanation": "Clear explanation" }
+    { "term": "Key Term", "explanation": "Detailed explanation" }
   ],
-  "summary": "Concise summary paragraph",
+  "summary": "Comprehensive summary paragraph",
   "flashcards": [
     { "question": "What is ...?", "answer": "It is ..." }
   ]
@@ -256,7 +284,7 @@ export async function POST(request: NextRequest) {
   const service = getServiceClient();
   const { data: keyRecord } = await service
     .from("api_keys")
-    .select("id, user_id, is_active")
+    .select("id, user_id, is_active, request_count")
     .eq("key", pyawkyiKey)
     .single();
 
@@ -317,8 +345,8 @@ export async function POST(request: NextRequest) {
 
   // ─── 6. PROCESS via Gemini ───
   const systemPrompt = SYSTEM_PROMPTS[mode];
-  const primaryModel = "gemini-3-flash-preview";
-  const fallbackModel = "gemini-2.5-flash";
+  const primaryModel = "gemini-2.0-flash";
+  const fallbackModel = "gemini-1.5-flash";
 
   let result: string | null = null;
   let lastError: string | null = null;
@@ -355,9 +383,7 @@ export async function POST(request: NextRequest) {
   service
     .from("api_keys")
     .update({
-      request_count:
-        (((keyRecord as Record<string, unknown>).request_count as number) ||
-          0) + 1,
+      request_count: ((keyRecord.request_count as number) || 0) + 1,
       last_used_at: new Date().toISOString(),
     })
     .eq("id", keyRecord.id)
@@ -379,14 +405,14 @@ export async function POST(request: NextRequest) {
           );
           const fixCleaned = cleanResponse(fixResult);
           const fixParsed = JSON.parse(fixCleaned);
-          return NextResponse.json({
+          return jsonResponse({
             result: {
               html_code: generatedCode,
               fixed_code: fixParsed.fixed_code || generatedCode,
             },
           });
         } catch {
-          return NextResponse.json({
+          return jsonResponse({
             result: { html_code: generatedCode, fixed_code: generatedCode },
           });
         }
@@ -400,17 +426,17 @@ export async function POST(request: NextRequest) {
   const cleaned = cleanResponse(result);
   try {
     const parsed = JSON.parse(cleaned);
-    return NextResponse.json({ result: parsed });
+    return jsonResponse({ result: parsed });
   } catch {
     const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
-        return NextResponse.json({ result: JSON.parse(jsonMatch[0]) });
+        return jsonResponse({ result: JSON.parse(jsonMatch[0]) });
       } catch {
         // fall through
       }
     }
-    return NextResponse.json({ result: { raw: cleaned } });
+    return jsonResponse({ result: { raw: cleaned } });
   }
 }
 

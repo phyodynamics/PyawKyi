@@ -85,6 +85,7 @@ const pricingFeatures = [
   "Burmese & English Support",
   "Unlimited Voice Input",
   "Save & History",
+  "PyawKyi API Key (Apple Shortcuts & Integrations)",
   "Lifetime Updates",
 ];
 
@@ -391,7 +392,7 @@ export default function WelcomePage() {
       {/* Footer */}
       <footer className="px-4 py-8 text-center border-t border-neutral-100 dark:border-neutral-900">
         <p className="text-xs text-neutral-400">
-          © 2025 Pyaw Kyi. Built with ❤️ in Myanmar.
+          © 2026 Pyaw Kyi. Built with ❤️ in Myanmar.
         </p>
       </footer>
     </main>

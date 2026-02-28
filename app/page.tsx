@@ -393,7 +393,11 @@ export default function Home() {
       {/* Welcome Animation */}
       <AnimatePresence>
         {showWelcome && (
-          <WelcomeAnimation onComplete={() => setShowWelcome(false)} />
+          <WelcomeAnimation
+            onComplete={() => setShowWelcome(false)}
+            userName={userName}
+            userAvatar={userAvatar}
+          />
         )}
       </AnimatePresence>
 

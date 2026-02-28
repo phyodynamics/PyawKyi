@@ -6,9 +6,15 @@ import Image from "next/image";
 
 interface WelcomeAnimationProps {
   onComplete: () => void;
+  userName?: string;
+  userAvatar?: string | null;
 }
 
-export function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) {
+export function WelcomeAnimation({
+  onComplete,
+  userName,
+  userAvatar,
+}: WelcomeAnimationProps) {
   const [stage, setStage] = useState<"logo" | "text" | "exit">("logo");
 
   useEffect(() => {
@@ -58,7 +64,7 @@ export function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) {
               />
             </motion.div>
 
-            {/* Subtitle */}
+            {/* Welcome text */}
             <motion.div
               className="text-center"
               initial={{ opacity: 0, y: 10 }}
@@ -74,8 +80,31 @@ export function WelcomeAnimation({ onComplete }: WelcomeAnimationProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.4 }}
               >
-                Voice to AI Assistant
+                Welcome to Pyaw Kyi
               </motion.p>
+
+              {/* User info */}
+              {userName && (
+                <motion.div
+                  className="flex items-center justify-center gap-2.5 mt-3"
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: 0.6 }}
+                >
+                  {userAvatar && (
+                    <Image
+                      src={userAvatar}
+                      alt={userName}
+                      width={28}
+                      height={28}
+                      className="w-7 h-7 rounded-full border border-border"
+                    />
+                  )}
+                  <span className="text-base font-medium text-foreground">
+                    {userName}
+                  </span>
+                </motion.div>
+              )}
             </motion.div>
 
             {/* Built by */}
