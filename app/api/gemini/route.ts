@@ -306,8 +306,8 @@ export async function POST(request: NextRequest) {
 
     // ─── 5. PROXY REQUEST TO GEMINI API ───
     // User's API key stays on the server — never sent to the browser
-    const primaryModel = "gemini-2.0-flash";
-    const fallbackModel = "gemini-1.5-flash";
+    const primaryModel = "gemini-3-flash-preview";
+    const fallbackModel = "gemini-2.5-flash";
 
     let result: string | null = null;
     let lastError: { message: string; isRetryable: boolean } | null = null;

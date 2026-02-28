@@ -345,8 +345,8 @@ export async function POST(request: NextRequest) {
 
   // ─── 6. PROCESS via Gemini ───
   const systemPrompt = SYSTEM_PROMPTS[mode];
-  const primaryModel = "gemini-2.0-flash";
-  const fallbackModel = "gemini-1.5-flash";
+  const primaryModel = "gemini-3-flash-preview";
+  const fallbackModel = "gemini-2.5-flash";
 
   let result: string | null = null;
   let lastError: string | null = null;
