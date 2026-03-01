@@ -128,21 +128,10 @@ export async function middleware(request: NextRequest) {
   const hasGeminiKey = !!profile?.gemini_api_key;
 
   // ═══════════════════════════════════════════════════
-  // WAITLIST MODE — users can sign up & pay,
-  // but paid users see /waitlist instead of main app
+  // WAITLIST MODE — all registered users see /waitlist
+  // No payment needed, just sign up and wait
   // ═══════════════════════════════════════════════════
   if (waitlistMode) {
-    // Not paid → allow /pending for payment flow
-    if (!isPaid) {
-      if (pathname === "/pending") {
-        return supabaseResponse;
-      }
-      const url = request.nextUrl.clone();
-      url.pathname = "/pending";
-      return NextResponse.redirect(url);
-    }
-
-    // Paid → show /waitlist
     if (pathname === "/waitlist") {
       return supabaseResponse;
     }
