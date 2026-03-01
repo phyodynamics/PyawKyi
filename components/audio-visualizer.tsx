@@ -8,6 +8,24 @@ interface AudioVisualizerProps {
   analyser: AnalyserNode | null;
 }
 
+interface Bubble {
+  x: number;
+  y: number;
+  radius: number;
+  baseRadius: number;
+  targetRadius: number;
+  vx: number;
+  vy: number;
+  phase: number;
+  freqBand: number; // which frequency band this bubble responds to
+  alpha: number;
+  targetAlpha: number;
+  pulseSpeed: number;
+  orbitRadius: number;
+  orbitAngle: number;
+  orbitSpeed: number;
+}
+
 export function AudioVisualizer({
   isRecording,
   analyser,
@@ -15,18 +33,112 @@ export function AudioVisualizer({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
   const dataArrayRef = useRef<Uint8Array | null>(null);
-  const smoothedRef = useRef<Float32Array | null>(null);
+  const bubblesRef = useRef<Bubble[]>([]);
   const volumeRef = useRef(0);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
     if (analyser) {
       analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.82;
-      const bufferLength = analyser.frequencyBinCount;
-      dataArrayRef.current = new Uint8Array(bufferLength);
-      smoothedRef.current = new Float32Array(bufferLength).fill(0);
+      analyser.smoothingTimeConstant = 0.8;
+      dataArrayRef.current = new Uint8Array(analyser.frequencyBinCount);
     }
   }, [analyser]);
+
+  // Initialize bubbles once
+  const initBubbles = useCallback((width: number, height: number) => {
+    if (initializedRef.current && bubblesRef.current.length > 0) return;
+
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const bubbles: Bubble[] = [];
+
+    // Create layered bubble cluster
+    const configs = [
+      // Core bubbles (respond to low freq / bass)
+      {
+        count: 3,
+        minR: 18,
+        maxR: 28,
+        orbitR: 0,
+        freqStart: 0,
+        freqEnd: 0.15,
+        alphaBase: 0.25,
+      },
+      // Inner ring (respond to low-mid freq)
+      {
+        count: 5,
+        minR: 12,
+        maxR: 20,
+        orbitR: 35,
+        freqStart: 0.1,
+        freqEnd: 0.3,
+        alphaBase: 0.2,
+      },
+      // Mid ring (respond to mid freq / voice)
+      {
+        count: 7,
+        minR: 8,
+        maxR: 15,
+        orbitR: 60,
+        freqStart: 0.2,
+        freqEnd: 0.5,
+        alphaBase: 0.18,
+      },
+      // Outer ring (respond to high freq)
+      {
+        count: 9,
+        minR: 4,
+        maxR: 10,
+        orbitR: 85,
+        freqStart: 0.4,
+        freqEnd: 0.7,
+        alphaBase: 0.12,
+      },
+      // Scattered tiny bubbles
+      {
+        count: 12,
+        minR: 2,
+        maxR: 5,
+        orbitR: 110,
+        freqStart: 0.5,
+        freqEnd: 0.9,
+        alphaBase: 0.08,
+      },
+    ];
+
+    for (const cfg of configs) {
+      for (let i = 0; i < cfg.count; i++) {
+        const angle = (i / cfg.count) * Math.PI * 2 + Math.random() * 0.5;
+        const orbitR = cfg.orbitR + (Math.random() - 0.5) * 20;
+        const baseR = cfg.minR + Math.random() * (cfg.maxR - cfg.minR);
+        const freqBand =
+          cfg.freqStart + Math.random() * (cfg.freqEnd - cfg.freqStart);
+
+        bubbles.push({
+          x: centerX + Math.cos(angle) * orbitR,
+          y: centerY + Math.sin(angle) * orbitR,
+          radius: baseR,
+          baseRadius: baseR,
+          targetRadius: baseR,
+          vx: 0,
+          vy: 0,
+          phase: Math.random() * Math.PI * 2,
+          freqBand,
+          alpha: cfg.alphaBase,
+          targetAlpha: cfg.alphaBase,
+          pulseSpeed: 0.5 + Math.random() * 1.5,
+          orbitRadius: orbitR,
+          orbitAngle: angle,
+          orbitSpeed:
+            (0.1 + Math.random() * 0.3) * (Math.random() > 0.5 ? 1 : -1),
+        });
+      }
+    }
+
+    bubblesRef.current = bubbles;
+    initializedRef.current = true;
+  }, []);
 
   const draw = useCallback(
     (timestamp: number) => {
@@ -56,226 +168,161 @@ export function AudioVisualizer({
 
       const width = rect.width;
       const height = rect.height;
+      const centerX = width / 2;
       const centerY = height / 2;
       const isDark = document.documentElement.classList.contains("dark");
       const time = timestamp / 1000;
 
+      initBubbles(width, height);
       ctx.clearRect(0, 0, width, height);
 
-      if (
-        isRecording &&
-        analyser &&
-        dataArrayRef.current &&
-        smoothedRef.current
-      ) {
+      const bubbles = bubblesRef.current;
+      let vol = 0;
+
+      if (isRecording && analyser && dataArrayRef.current) {
         analyser.getByteFrequencyData(dataArrayRef.current);
         const bufferLength = analyser.frequencyBinCount;
 
-        // Calculate overall voice volume
-        let totalEnergy = 0;
+        // Calculate overall volume
+        let total = 0;
         for (let i = 0; i < bufferLength; i++) {
-          smoothedRef.current[i] +=
-            (dataArrayRef.current[i] / 255 - smoothedRef.current[i]) * 0.18;
-          totalEnergy += smoothedRef.current[i];
+          total += dataArrayRef.current[i];
         }
-        const avgVolume = totalEnergy / bufferLength;
-        volumeRef.current += (avgVolume - volumeRef.current) * 0.15;
+        vol = total / (bufferLength * 255);
+        volumeRef.current += (vol - volumeRef.current) * 0.15;
 
-        const vol = volumeRef.current;
-
-        // ── Draw 3 layered organic voice waves ──
-        const layers = [
-          {
-            alpha: isDark ? 0.08 : 0.06,
-            freqScale: 1.0,
-            amplitude: 0.85,
-            speed: 1.2,
-            points: 200,
-          },
-          {
-            alpha: isDark ? 0.18 : 0.14,
-            freqScale: 0.7,
-            amplitude: 0.65,
-            speed: 0.9,
-            points: 180,
-          },
-          {
-            alpha: isDark ? 0.45 : 0.4,
-            freqScale: 0.4,
-            amplitude: 0.45,
-            speed: 0.6,
-            points: 160,
-          },
-        ];
-
-        for (const layer of layers) {
-          const color = isDark
-            ? `rgba(255, 255, 255, ${layer.alpha + vol * 0.35})`
-            : `rgba(0, 0, 0, ${layer.alpha + vol * 0.35})`;
-
-          // Top half waveform
-          ctx.beginPath();
-          ctx.moveTo(0, centerY);
-
-          for (let px = 0; px <= width; px += 2) {
-            const t = px / width;
-            // Map pixel to frequency bin
-            const freqIdx = Math.floor(
-              Math.pow(t, 1.3) * bufferLength * layer.freqScale,
-            );
-            const freqValue =
-              smoothedRef.current[Math.min(freqIdx, bufferLength - 1)];
-
-            // Organic wave based on actual voice frequency
-            const baseWave = Math.sin(t * Math.PI); // Envelope: taper at edges
-            const voiceWave = freqValue * layer.amplitude * height * 0.4;
-            const breathe =
-              Math.sin(time * layer.speed + t * 6) * 2 * (1 + vol);
-            const micro = Math.sin(time * 3.5 + t * 20) * 1.5 * vol;
-
-            const y = centerY - (voiceWave + breathe + micro) * baseWave;
-
-            if (px === 0) ctx.moveTo(px, y);
-            else ctx.lineTo(px, y);
-          }
-
-          // Mirror bottom half
-          for (let px = width; px >= 0; px -= 2) {
-            const t = px / width;
-            const freqIdx = Math.floor(
-              Math.pow(t, 1.3) * bufferLength * layer.freqScale,
-            );
-            const freqValue =
-              smoothedRef.current[Math.min(freqIdx, bufferLength - 1)];
-
-            const baseWave = Math.sin(t * Math.PI);
-            const voiceWave = freqValue * layer.amplitude * height * 0.4;
-            const breathe =
-              Math.sin(time * layer.speed + t * 6 + 0.5) * 2 * (1 + vol);
-            const micro = Math.sin(time * 3.5 + t * 20 + 1) * 1.5 * vol;
-
-            const y = centerY + (voiceWave + breathe + micro) * baseWave;
-
-            ctx.lineTo(px, y);
-          }
-
-          ctx.closePath();
-          ctx.fillStyle = color;
-          ctx.fill();
-        }
-
-        // ── Center bright line (voice intensity) ──
-        ctx.beginPath();
-        ctx.moveTo(0, centerY);
-
-        for (let px = 0; px <= width; px += 1) {
-          const t = px / width;
-          const freqIdx = Math.floor(Math.pow(t, 1.3) * bufferLength * 0.35);
+        // Update bubbles based on voice frequency
+        for (const bubble of bubbles) {
+          const freqIdx = Math.floor(bubble.freqBand * bufferLength);
           const freqValue =
-            smoothedRef.current[Math.min(freqIdx, bufferLength - 1)];
+            dataArrayRef.current[Math.min(freqIdx, bufferLength - 1)] / 255;
 
-          const baseWave = Math.sin(t * Math.PI);
-          const lineY =
-            centerY - freqValue * height * 0.2 * baseWave * (0.6 + vol * 1.5);
+          // Bubble grows with its frequency band
+          bubble.targetRadius = bubble.baseRadius * (1 + freqValue * 1.8);
+          bubble.targetAlpha = 0.1 + freqValue * 0.55;
 
-          if (px === 0) ctx.moveTo(px, lineY);
-          else ctx.lineTo(px, lineY);
+          // Faster orbit when voice is active
+          bubble.orbitAngle += bubble.orbitSpeed * (0.008 + freqValue * 0.025);
+
+          // Orbit expands/contracts with volume
+          const dynamicOrbit =
+            bubble.orbitRadius * (1 + volumeRef.current * 0.35);
+
+          // Target position: orbit around center
+          const targetX = centerX + Math.cos(bubble.orbitAngle) * dynamicOrbit;
+          const targetY = centerY + Math.sin(bubble.orbitAngle) * dynamicOrbit;
+
+          // Smooth movement toward target
+          bubble.x += (targetX - bubble.x) * 0.06;
+          bubble.y += (targetY - bubble.y) * 0.06;
+        }
+      } else {
+        // Idle: gentle floating
+        volumeRef.current *= 0.96;
+
+        for (const bubble of bubbles) {
+          bubble.targetRadius =
+            bubble.baseRadius *
+            (0.85 + Math.sin(time * bubble.pulseSpeed + bubble.phase) * 0.15);
+          bubble.targetAlpha =
+            0.06 + Math.sin(time * 0.5 + bubble.phase) * 0.03;
+
+          bubble.orbitAngle += bubble.orbitSpeed * 0.004;
+
+          const targetX =
+            centerX + Math.cos(bubble.orbitAngle) * bubble.orbitRadius * 0.85;
+          const targetY =
+            centerY + Math.sin(bubble.orbitAngle) * bubble.orbitRadius * 0.85;
+
+          bubble.x += (targetX - bubble.x) * 0.03;
+          bubble.y += (targetY - bubble.y) * 0.03;
+        }
+      }
+
+      // ── Smooth radius and alpha interpolation ──
+      for (const bubble of bubbles) {
+        bubble.radius += (bubble.targetRadius - bubble.radius) * 0.12;
+        bubble.alpha += (bubble.targetAlpha - bubble.alpha) * 0.1;
+      }
+
+      // ── Draw bubbles (back to front by size) ──
+      const sorted = [...bubbles].sort((a, b) => a.radius - b.radius);
+
+      for (const bubble of sorted) {
+        const r = Math.max(1, bubble.radius);
+
+        // Radial gradient for glassy bubble effect
+        const gradient = ctx.createRadialGradient(
+          bubble.x - r * 0.25,
+          bubble.y - r * 0.25,
+          r * 0.1,
+          bubble.x,
+          bubble.y,
+          r,
+        );
+
+        if (isDark) {
+          gradient.addColorStop(
+            0,
+            `rgba(255, 255, 255, ${bubble.alpha * 1.2})`,
+          );
+          gradient.addColorStop(
+            0.5,
+            `rgba(255, 255, 255, ${bubble.alpha * 0.7})`,
+          );
+          gradient.addColorStop(
+            1,
+            `rgba(255, 255, 255, ${bubble.alpha * 0.15})`,
+          );
+        } else {
+          gradient.addColorStop(0, `rgba(0, 0, 0, ${bubble.alpha * 0.9})`);
+          gradient.addColorStop(0.5, `rgba(0, 0, 0, ${bubble.alpha * 0.5})`);
+          gradient.addColorStop(1, `rgba(0, 0, 0, ${bubble.alpha * 0.1})`);
         }
 
-        const lineAlpha = isDark ? 0.5 + vol * 0.5 : 0.4 + vol * 0.5;
-        ctx.strokeStyle = isDark
-          ? `rgba(255, 255, 255, ${lineAlpha})`
-          : `rgba(0, 0, 0, ${lineAlpha})`;
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      } else {
-        // ── Idle: gentle ambient breathing waveform ──
-        volumeRef.current *= 0.94;
+        ctx.beginPath();
+        ctx.arc(bubble.x, bubble.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
 
-        const layers = [
-          { alpha: isDark ? 0.04 : 0.03, amplitude: 8, speed: 0.8, offset: 0 },
-          {
-            alpha: isDark ? 0.07 : 0.05,
-            amplitude: 5,
-            speed: 0.5,
-            offset: 1.2,
-          },
-          {
-            alpha: isDark ? 0.12 : 0.08,
-            amplitude: 3,
-            speed: 0.3,
-            offset: 2.4,
-          },
-        ];
+        // Subtle highlight on top-left of larger bubbles
+        if (r > 8) {
+          const highlightR = r * 0.35;
+          const hx = bubble.x - r * 0.3;
+          const hy = bubble.y - r * 0.3;
+          const highlightGrad = ctx.createRadialGradient(
+            hx,
+            hy,
+            0,
+            hx,
+            hy,
+            highlightR,
+          );
 
-        for (const layer of layers) {
-          const color = isDark
-            ? `rgba(255, 255, 255, ${layer.alpha})`
-            : `rgba(0, 0, 0, ${layer.alpha})`;
+          if (isDark) {
+            highlightGrad.addColorStop(
+              0,
+              `rgba(255, 255, 255, ${bubble.alpha * 0.5})`,
+            );
+            highlightGrad.addColorStop(1, `rgba(255, 255, 255, 0)`);
+          } else {
+            highlightGrad.addColorStop(
+              0,
+              `rgba(255, 255, 255, ${bubble.alpha * 0.8})`,
+            );
+            highlightGrad.addColorStop(1, `rgba(255, 255, 255, 0)`);
+          }
 
           ctx.beginPath();
-          ctx.moveTo(0, centerY);
-
-          // Top wave
-          for (let px = 0; px <= width; px += 2) {
-            const t = px / width;
-            const envelope = Math.sin(t * Math.PI); // Edge taper
-            const wave1 = Math.sin(time * layer.speed + t * 4 + layer.offset);
-            const wave2 =
-              Math.sin(time * layer.speed * 0.7 + t * 7 + layer.offset) * 0.4;
-            const y = centerY - (wave1 + wave2) * layer.amplitude * envelope;
-
-            if (px === 0) ctx.moveTo(px, y);
-            else ctx.lineTo(px, y);
-          }
-
-          // Bottom mirror
-          for (let px = width; px >= 0; px -= 2) {
-            const t = px / width;
-            const envelope = Math.sin(t * Math.PI);
-            const wave1 = Math.sin(
-              time * layer.speed + t * 4 + layer.offset + 0.3,
-            );
-            const wave2 =
-              Math.sin(time * layer.speed * 0.7 + t * 7 + layer.offset + 0.3) *
-              0.4;
-            const y = centerY + (wave1 + wave2) * layer.amplitude * envelope;
-
-            ctx.lineTo(px, y);
-          }
-
-          ctx.closePath();
-          ctx.fillStyle = color;
+          ctx.arc(hx, hy, highlightR, 0, Math.PI * 2);
+          ctx.fillStyle = highlightGrad;
           ctx.fill();
-        }
-
-        // Thin idle center line
-        ctx.beginPath();
-        for (let px = 0; px <= width; px += 1) {
-          const t = px / width;
-          const envelope = Math.sin(t * Math.PI);
-          const y = centerY - Math.sin(time * 0.6 + t * 5) * 2 * envelope;
-
-          if (px === 0) ctx.moveTo(px, y);
-          else ctx.lineTo(px, y);
-        }
-        ctx.strokeStyle = isDark
-          ? "rgba(255, 255, 255, 0.08)"
-          : "rgba(0, 0, 0, 0.06)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        // Decay smoothed data
-        if (smoothedRef.current) {
-          for (let i = 0; i < smoothedRef.current.length; i++) {
-            smoothedRef.current[i] *= 0.93;
-          }
         }
       }
 
       animationRef.current = requestAnimationFrame(draw);
     },
-    [isRecording, analyser],
+    [isRecording, analyser, initBubbles],
   );
 
   useEffect(() => {
@@ -287,10 +334,10 @@ export function AudioVisualizer({
 
   return (
     <motion.div
-      className="w-full max-w-lg h-32 md:h-40"
-      initial={{ opacity: 0, scale: 0.95 }}
+      className="w-full max-w-md h-56 md:h-64"
+      initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
     >
       <canvas
         ref={canvasRef}
