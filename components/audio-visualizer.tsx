@@ -15,14 +15,16 @@ export function AudioVisualizer({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
   const dataArrayRef = useRef<Uint8Array | null>(null);
-  const smoothedDataRef = useRef<Float32Array | null>(null);
-  const phaseRef = useRef(0);
+  const smoothedRef = useRef<Float32Array | null>(null);
+  const volumeRef = useRef(0);
 
   useEffect(() => {
     if (analyser) {
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.82;
       const bufferLength = analyser.frequencyBinCount;
       dataArrayRef.current = new Uint8Array(bufferLength);
-      smoothedDataRef.current = new Float32Array(48).fill(0);
+      smoothedRef.current = new Float32Array(bufferLength).fill(0);
     }
   }, [analyser]);
 
@@ -55,100 +57,218 @@ export function AudioVisualizer({
       const width = rect.width;
       const height = rect.height;
       const centerY = height / 2;
-      const barCount = 48;
       const isDark = document.documentElement.classList.contains("dark");
+      const time = timestamp / 1000;
 
       ctx.clearRect(0, 0, width, height);
-
-      // Spacing calculation: bars radiate from center
-      const totalBarWidth = width * 0.85;
-      const gap = 3;
-      const barWidth = (totalBarWidth - (barCount - 1) * gap) / barCount;
-      const startX = (width - totalBarWidth) / 2;
 
       if (
         isRecording &&
         analyser &&
         dataArrayRef.current &&
-        smoothedDataRef.current
+        smoothedRef.current
       ) {
         analyser.getByteFrequencyData(dataArrayRef.current);
         const bufferLength = analyser.frequencyBinCount;
 
-        phaseRef.current += 0.02;
-
-        for (let i = 0; i < barCount; i++) {
-          // Mirror effect: bars grow from center outward
-          const mirrorIndex =
-            i < barCount / 2 ? barCount / 2 - 1 - i : i - barCount / 2;
-
-          // Frequency mapping: voice frequencies emphasized
-          const dataIndex = Math.floor(
-            Math.pow(mirrorIndex / (barCount / 2), 1.4) * bufferLength * 0.45,
-          );
-          const rawValue = dataArrayRef.current[dataIndex] / 255;
-
-          // Smooth interpolation
-          smoothedDataRef.current[i] +=
-            (rawValue - smoothedDataRef.current[i]) * 0.25;
-          const value = smoothedDataRef.current[i];
-
-          // Distance from center affects max height (taller in center)
-          const distFromCenter = Math.abs(i - barCount / 2) / (barCount / 2);
-          const heightMultiplier = 1 - distFromCenter * 0.4;
-          const maxBarHeight = height * 0.75 * heightMultiplier;
-
-          const barHeight = Math.max(3, value * maxBarHeight);
-
-          const x = startX + i * (barWidth + gap);
-          const y = centerY - barHeight / 2;
-
-          // Gradient intensity based on value
-          const alpha = 0.35 + value * 0.65;
-          const baseColor = isDark
-            ? `rgba(255, 255, 255, ${alpha})`
-            : `rgba(0, 0, 0, ${alpha})`;
-
-          ctx.fillStyle = baseColor;
-          ctx.beginPath();
-          ctx.roundRect(x, y, barWidth, barHeight, barWidth / 2);
-          ctx.fill();
+        // Calculate overall voice volume
+        let totalEnergy = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          smoothedRef.current[i] +=
+            (dataArrayRef.current[i] / 255 - smoothedRef.current[i]) * 0.18;
+          totalEnergy += smoothedRef.current[i];
         }
-      } else {
-        // Idle: gentle breathing wave from center
-        const time = timestamp / 1000;
-        phaseRef.current = time;
+        const avgVolume = totalEnergy / bufferLength;
+        volumeRef.current += (avgVolume - volumeRef.current) * 0.15;
 
-        for (let i = 0; i < barCount; i++) {
-          const distFromCenter = Math.abs(i - barCount / 2) / (barCount / 2);
+        const vol = volumeRef.current;
 
-          // Multiple sine waves for organic feel
-          const wave1 = Math.sin(time * 1.5 + i * 0.18) * 0.5 + 0.5;
-          const wave2 = Math.sin(time * 0.8 + i * 0.12 + 1.5) * 0.3 + 0.5;
-          const combined = wave1 * 0.6 + wave2 * 0.4;
+        // ── Draw 3 layered organic voice waves ──
+        const layers = [
+          {
+            alpha: isDark ? 0.08 : 0.06,
+            freqScale: 1.0,
+            amplitude: 0.85,
+            speed: 1.2,
+            points: 200,
+          },
+          {
+            alpha: isDark ? 0.18 : 0.14,
+            freqScale: 0.7,
+            amplitude: 0.65,
+            speed: 0.9,
+            points: 180,
+          },
+          {
+            alpha: isDark ? 0.45 : 0.4,
+            freqScale: 0.4,
+            amplitude: 0.45,
+            speed: 0.6,
+            points: 160,
+          },
+        ];
 
-          // Center bars are taller
-          const heightMultiplier = 1 - distFromCenter * 0.7;
-          const barHeight = 3 + combined * 18 * heightMultiplier;
-
-          const x = startX + i * (barWidth + gap);
-          const y = centerY - barHeight / 2;
-
-          const alpha = 0.12 + combined * 0.12;
+        for (const layer of layers) {
           const color = isDark
-            ? `rgba(255, 255, 255, ${alpha})`
-            : `rgba(0, 0, 0, ${alpha})`;
+            ? `rgba(255, 255, 255, ${layer.alpha + vol * 0.35})`
+            : `rgba(0, 0, 0, ${layer.alpha + vol * 0.35})`;
 
-          ctx.fillStyle = color;
+          // Top half waveform
           ctx.beginPath();
-          ctx.roundRect(x, y, barWidth, barHeight, barWidth / 2);
+          ctx.moveTo(0, centerY);
+
+          for (let px = 0; px <= width; px += 2) {
+            const t = px / width;
+            // Map pixel to frequency bin
+            const freqIdx = Math.floor(
+              Math.pow(t, 1.3) * bufferLength * layer.freqScale,
+            );
+            const freqValue =
+              smoothedRef.current[Math.min(freqIdx, bufferLength - 1)];
+
+            // Organic wave based on actual voice frequency
+            const baseWave = Math.sin(t * Math.PI); // Envelope: taper at edges
+            const voiceWave = freqValue * layer.amplitude * height * 0.4;
+            const breathe =
+              Math.sin(time * layer.speed + t * 6) * 2 * (1 + vol);
+            const micro = Math.sin(time * 3.5 + t * 20) * 1.5 * vol;
+
+            const y = centerY - (voiceWave + breathe + micro) * baseWave;
+
+            if (px === 0) ctx.moveTo(px, y);
+            else ctx.lineTo(px, y);
+          }
+
+          // Mirror bottom half
+          for (let px = width; px >= 0; px -= 2) {
+            const t = px / width;
+            const freqIdx = Math.floor(
+              Math.pow(t, 1.3) * bufferLength * layer.freqScale,
+            );
+            const freqValue =
+              smoothedRef.current[Math.min(freqIdx, bufferLength - 1)];
+
+            const baseWave = Math.sin(t * Math.PI);
+            const voiceWave = freqValue * layer.amplitude * height * 0.4;
+            const breathe =
+              Math.sin(time * layer.speed + t * 6 + 0.5) * 2 * (1 + vol);
+            const micro = Math.sin(time * 3.5 + t * 20 + 1) * 1.5 * vol;
+
+            const y = centerY + (voiceWave + breathe + micro) * baseWave;
+
+            ctx.lineTo(px, y);
+          }
+
+          ctx.closePath();
+          ctx.fillStyle = color;
           ctx.fill();
         }
 
-        // Decay smoothed data gracefully
-        if (smoothedDataRef.current) {
-          for (let i = 0; i < smoothedDataRef.current.length; i++) {
-            smoothedDataRef.current[i] *= 0.92;
+        // ── Center bright line (voice intensity) ──
+        ctx.beginPath();
+        ctx.moveTo(0, centerY);
+
+        for (let px = 0; px <= width; px += 1) {
+          const t = px / width;
+          const freqIdx = Math.floor(Math.pow(t, 1.3) * bufferLength * 0.35);
+          const freqValue =
+            smoothedRef.current[Math.min(freqIdx, bufferLength - 1)];
+
+          const baseWave = Math.sin(t * Math.PI);
+          const lineY =
+            centerY - freqValue * height * 0.2 * baseWave * (0.6 + vol * 1.5);
+
+          if (px === 0) ctx.moveTo(px, lineY);
+          else ctx.lineTo(px, lineY);
+        }
+
+        const lineAlpha = isDark ? 0.5 + vol * 0.5 : 0.4 + vol * 0.5;
+        ctx.strokeStyle = isDark
+          ? `rgba(255, 255, 255, ${lineAlpha})`
+          : `rgba(0, 0, 0, ${lineAlpha})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      } else {
+        // ── Idle: gentle ambient breathing waveform ──
+        volumeRef.current *= 0.94;
+
+        const layers = [
+          { alpha: isDark ? 0.04 : 0.03, amplitude: 8, speed: 0.8, offset: 0 },
+          {
+            alpha: isDark ? 0.07 : 0.05,
+            amplitude: 5,
+            speed: 0.5,
+            offset: 1.2,
+          },
+          {
+            alpha: isDark ? 0.12 : 0.08,
+            amplitude: 3,
+            speed: 0.3,
+            offset: 2.4,
+          },
+        ];
+
+        for (const layer of layers) {
+          const color = isDark
+            ? `rgba(255, 255, 255, ${layer.alpha})`
+            : `rgba(0, 0, 0, ${layer.alpha})`;
+
+          ctx.beginPath();
+          ctx.moveTo(0, centerY);
+
+          // Top wave
+          for (let px = 0; px <= width; px += 2) {
+            const t = px / width;
+            const envelope = Math.sin(t * Math.PI); // Edge taper
+            const wave1 = Math.sin(time * layer.speed + t * 4 + layer.offset);
+            const wave2 =
+              Math.sin(time * layer.speed * 0.7 + t * 7 + layer.offset) * 0.4;
+            const y = centerY - (wave1 + wave2) * layer.amplitude * envelope;
+
+            if (px === 0) ctx.moveTo(px, y);
+            else ctx.lineTo(px, y);
+          }
+
+          // Bottom mirror
+          for (let px = width; px >= 0; px -= 2) {
+            const t = px / width;
+            const envelope = Math.sin(t * Math.PI);
+            const wave1 = Math.sin(
+              time * layer.speed + t * 4 + layer.offset + 0.3,
+            );
+            const wave2 =
+              Math.sin(time * layer.speed * 0.7 + t * 7 + layer.offset + 0.3) *
+              0.4;
+            const y = centerY + (wave1 + wave2) * layer.amplitude * envelope;
+
+            ctx.lineTo(px, y);
+          }
+
+          ctx.closePath();
+          ctx.fillStyle = color;
+          ctx.fill();
+        }
+
+        // Thin idle center line
+        ctx.beginPath();
+        for (let px = 0; px <= width; px += 1) {
+          const t = px / width;
+          const envelope = Math.sin(t * Math.PI);
+          const y = centerY - Math.sin(time * 0.6 + t * 5) * 2 * envelope;
+
+          if (px === 0) ctx.moveTo(px, y);
+          else ctx.lineTo(px, y);
+        }
+        ctx.strokeStyle = isDark
+          ? "rgba(255, 255, 255, 0.08)"
+          : "rgba(0, 0, 0, 0.06)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Decay smoothed data
+        if (smoothedRef.current) {
+          for (let i = 0; i < smoothedRef.current.length; i++) {
+            smoothedRef.current[i] *= 0.93;
           }
         }
       }
@@ -167,10 +287,10 @@ export function AudioVisualizer({
 
   return (
     <motion.div
-      className="w-full max-w-md h-28 md:h-36"
+      className="w-full max-w-lg h-32 md:h-40"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
     >
       <canvas
         ref={canvasRef}
