@@ -54,6 +54,57 @@ function getServiceClient() {
   );
 }
 
+// Helper: send push notification to all subscribers
+async function sendPushToAll(
+  service: any,
+  title: string,
+  message: string,
+  type: string = "info",
+) {
+  try {
+    const { data: subscriptions } = await service
+      .from("push_subscriptions")
+      .select("*");
+
+    if (!subscriptions || subscriptions.length === 0) return;
+
+    const payload = JSON.stringify({
+      title,
+      body: message,
+      message,
+      type,
+      id: `auto-${Date.now()}`,
+    });
+
+    await Promise.allSettled(
+      subscriptions.map(async (sub: any) => {
+        try {
+          await webPush.sendNotification(
+            {
+              endpoint: sub.endpoint,
+              keys: {
+                p256dh: sub.keys_p256dh,
+                auth: sub.keys_auth,
+              },
+            },
+            payload,
+          );
+        } catch (err: unknown) {
+          const error = err as { statusCode?: number };
+          if (error.statusCode === 410 || error.statusCode === 404) {
+            await service
+              .from("push_subscriptions")
+              .delete()
+              .eq("endpoint", sub.endpoint);
+          }
+        }
+      }),
+    );
+  } catch {
+    // Push failure shouldn't block anything
+  }
+}
+
 // GET: Fetch all data for admin dashboard + analytics
 export async function GET(request: NextRequest) {
   const admin = await verifyAdmin(request);
@@ -224,63 +275,46 @@ export async function POST(request: NextRequest) {
         })
         .eq("id", "global");
 
-      // Auto-send push notification when maintenance is turned ON
       if (isEnabling) {
-        try {
-          const { data: subscriptions } = await service
-            .from("push_subscriptions")
-            .select("*");
-
-          if (subscriptions && subscriptions.length > 0) {
-            const payload = JSON.stringify({
-              title: "🔧 Maintenance Mode",
-              body: "Pyaw Kyi is under maintenance. We'll be back shortly!",
-              message: "Pyaw Kyi is under maintenance. We'll be back shortly!",
-              type: "alert",
-              id: `maint-${Date.now()}`,
-            });
-
-            await Promise.allSettled(
-              subscriptions.map(async (sub: any) => {
-                try {
-                  await webPush.sendNotification(
-                    {
-                      endpoint: sub.endpoint,
-                      keys: {
-                        p256dh: sub.keys_p256dh,
-                        auth: sub.keys_auth,
-                      },
-                    },
-                    payload,
-                  );
-                } catch (err: unknown) {
-                  const error = err as { statusCode?: number };
-                  if (error.statusCode === 410 || error.statusCode === 404) {
-                    await service
-                      .from("push_subscriptions")
-                      .delete()
-                      .eq("endpoint", sub.endpoint);
-                  }
-                }
-              }),
-            );
-          }
-        } catch {
-          // Push failure shouldn't block the toggle
-        }
+        // Maintenance ON → notify users
+        await sendPushToAll(
+          service,
+          "🔧 Maintenance Mode",
+          "Pyaw Kyi is under maintenance. We'll be back shortly!",
+          "alert",
+        );
+      } else {
+        // Maintenance OFF → notify users we're back
+        await sendPushToAll(
+          service,
+          "🎉 We're Back!",
+          "Pyaw Kyi is back online. Come check it out!",
+          "update",
+        );
       }
       break;
     }
 
     case "toggle_waitlist": {
       const { enabled: wlEnabled } = body;
+      const isWlEnabling = wlEnabled === true || wlEnabled === "true";
       await service
         .from("app_settings")
         .update({
-          waitlist_mode: wlEnabled === true || wlEnabled === "true",
+          waitlist_mode: isWlEnabling,
           updated_at: new Date().toISOString(),
         })
         .eq("id", "global");
+
+      if (!isWlEnabling) {
+        // Waitlist OFF → the app is live!
+        await sendPushToAll(
+          service,
+          "🚀 Pyaw Kyi is Live!",
+          "The wait is over! Pyaw Kyi is now available. Start using the app now!",
+          "update",
+        );
+      }
       break;
     }
 
