@@ -99,6 +99,7 @@ Stack: HTML5, Vanilla JavaScript (ES6+), TailwindCSS (CDN: https://cdn.tailwindc
 3. **Robust JavaScript:** Use try-catch for error handling. Add loading states and empty states.
 4. **Localization:** ALL visible UI text (buttons, labels, headings, placeholders) MUST be in the User's Input Language.
 5. **Data Persistence:** Use localStorage where appropriate for user data persistence.
+6. **FORBIDDEN FEATURES (NEVER INCLUDE):** Do NOT add microphone access, audio recording, speech recognition, voice input, Web Audio API, getUserMedia, MediaRecorder, or SpeechRecognition. Do NOT add microphone icons or voice buttons. The user's voice is already transcribed — just build what they describe.
 
 # OUTPUT FORMAT
 Strictly return a JSON object.

@@ -257,12 +257,15 @@ export default function Home() {
       setIsRefining(true);
       setError(null);
       try {
-        if (currentMode === "build" && "fixed_code" in result) {
-          const refined = await refineCode(
-            result.fixed_code || result.html_code,
-            instruction,
-          );
-          setResult({ ...result, fixed_code: refined });
+        if (currentMode === "build") {
+          const buildCode =
+            ("fixed_code" in result ? result.fixed_code : null) ||
+            ("html_code" in result ? result.html_code : "");
+          const refined = await refineCode(buildCode, instruction);
+          setResult({
+            html_code: "html_code" in result ? result.html_code : buildCode,
+            fixed_code: refined,
+          } as BuildResult);
         } else {
           let content = "";
           if ("refined_text" in result) content = result.refined_text;
