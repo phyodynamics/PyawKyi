@@ -63,7 +63,7 @@ export function AudioVisualizer({
         orbitR: 0,
         freqStart: 0,
         freqEnd: 0.15,
-        alphaBase: 0.25,
+        alphaBase: 0.55,
       },
       // Inner ring (respond to low-mid freq)
       {
@@ -73,7 +73,7 @@ export function AudioVisualizer({
         orbitR: 35,
         freqStart: 0.1,
         freqEnd: 0.3,
-        alphaBase: 0.2,
+        alphaBase: 0.45,
       },
       // Mid ring (respond to mid freq / voice)
       {
@@ -83,7 +83,7 @@ export function AudioVisualizer({
         orbitR: 60,
         freqStart: 0.2,
         freqEnd: 0.5,
-        alphaBase: 0.18,
+        alphaBase: 0.38,
       },
       // Outer ring (respond to high freq)
       {
@@ -93,7 +93,7 @@ export function AudioVisualizer({
         orbitR: 85,
         freqStart: 0.4,
         freqEnd: 0.7,
-        alphaBase: 0.12,
+        alphaBase: 0.28,
       },
       // Scattered tiny bubbles
       {
@@ -103,7 +103,7 @@ export function AudioVisualizer({
         orbitR: 110,
         freqStart: 0.5,
         freqEnd: 0.9,
-        alphaBase: 0.08,
+        alphaBase: 0.2,
       },
     ];
 
@@ -199,7 +199,7 @@ export function AudioVisualizer({
 
           // Bubble grows with its frequency band
           bubble.targetRadius = bubble.baseRadius * (1 + freqValue * 1.8);
-          bubble.targetAlpha = 0.1 + freqValue * 0.55;
+          bubble.targetAlpha = 0.3 + freqValue * 0.7;
 
           // Faster orbit when voice is active
           bubble.orbitAngle += bubble.orbitSpeed * (0.008 + freqValue * 0.025);
@@ -225,7 +225,7 @@ export function AudioVisualizer({
             bubble.baseRadius *
             (0.85 + Math.sin(time * bubble.pulseSpeed + bubble.phase) * 0.15);
           bubble.targetAlpha =
-            0.06 + Math.sin(time * 0.5 + bubble.phase) * 0.03;
+            0.18 + Math.sin(time * 0.5 + bubble.phase) * 0.08;
 
           bubble.orbitAngle += bubble.orbitSpeed * 0.004;
 
@@ -264,20 +264,23 @@ export function AudioVisualizer({
         if (isDark) {
           gradient.addColorStop(
             0,
-            `rgba(255, 255, 255, ${bubble.alpha * 1.2})`,
+            `rgba(255, 255, 255, ${Math.min(bubble.alpha * 1.4, 1)})`,
           );
           gradient.addColorStop(
             0.5,
-            `rgba(255, 255, 255, ${bubble.alpha * 0.7})`,
+            `rgba(255, 255, 255, ${bubble.alpha * 0.85})`,
           );
           gradient.addColorStop(
             1,
-            `rgba(255, 255, 255, ${bubble.alpha * 0.15})`,
+            `rgba(255, 255, 255, ${bubble.alpha * 0.3})`,
           );
         } else {
-          gradient.addColorStop(0, `rgba(0, 0, 0, ${bubble.alpha * 0.9})`);
-          gradient.addColorStop(0.5, `rgba(0, 0, 0, ${bubble.alpha * 0.5})`);
-          gradient.addColorStop(1, `rgba(0, 0, 0, ${bubble.alpha * 0.1})`);
+          gradient.addColorStop(
+            0,
+            `rgba(0, 0, 0, ${Math.min(bubble.alpha * 1.2, 1)})`,
+          );
+          gradient.addColorStop(0.5, `rgba(0, 0, 0, ${bubble.alpha * 0.7})`);
+          gradient.addColorStop(1, `rgba(0, 0, 0, ${bubble.alpha * 0.2})`);
         }
 
         ctx.beginPath();
@@ -302,13 +305,13 @@ export function AudioVisualizer({
           if (isDark) {
             highlightGrad.addColorStop(
               0,
-              `rgba(255, 255, 255, ${bubble.alpha * 0.5})`,
+              `rgba(255, 255, 255, ${Math.min(bubble.alpha * 0.8, 0.9)})`,
             );
             highlightGrad.addColorStop(1, `rgba(255, 255, 255, 0)`);
           } else {
             highlightGrad.addColorStop(
               0,
-              `rgba(255, 255, 255, ${bubble.alpha * 0.8})`,
+              `rgba(255, 255, 255, ${Math.min(bubble.alpha * 1.2, 0.95)})`,
             );
             highlightGrad.addColorStop(1, `rgba(255, 255, 255, 0)`);
           }
