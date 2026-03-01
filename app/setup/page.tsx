@@ -46,11 +46,14 @@ export default function SetupPage() {
     setError(null);
 
     try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey.trim()}`,
-      );
+      const res = await fetch("/api/validate-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: apiKey.trim() }),
+      });
       if (!res.ok) {
-        setError("Invalid API key. Please check and try again.");
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Invalid API key. Please check and try again.");
         setSaving(false);
         return;
       }
