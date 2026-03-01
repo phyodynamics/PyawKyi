@@ -25,10 +25,28 @@ import {
   Send,
   ArrowUpRight,
   Activity,
+  Settings,
+  Wrench,
+  Clock,
+  DollarSign,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-type Tab = "analytics" | "forms" | "status" | "keys" | "management" | "notify";
+type Tab =
+  | "analytics"
+  | "forms"
+  | "status"
+  | "keys"
+  | "management"
+  | "notify"
+  | "settings";
+
+interface AppSettings {
+  maintenance_mode: boolean;
+  waitlist_mode: boolean;
+  price: number;
+  currency: string;
+}
 
 interface UserProfile {
   id: string;
@@ -40,6 +58,7 @@ interface UserProfile {
   gemini_api_key: string | null;
   created_at: string;
   paid_at: string | null;
+  price_paid: number | null;
 }
 
 interface PaymentSubmission {
@@ -85,6 +104,7 @@ const tabs: { id: Tab; label: string; icon: typeof ClipboardList }[] = [
   { id: "keys", label: "API Keys", icon: Key },
   { id: "management", label: "Users", icon: Users },
   { id: "notify", label: "Notify", icon: Bell },
+  { id: "settings", label: "Settings", icon: Settings },
 ];
 
 // Stat card component
@@ -142,6 +162,16 @@ export default function AdminPage() {
   >("info");
   const [notiSending, setNotiSending] = useState(false);
   const [notiSent, setNotiSent] = useState(false);
+  // Settings state
+  const [appSettings, setAppSettings] = useState<AppSettings>({
+    maintenance_mode: false,
+    waitlist_mode: false,
+    price: 20000,
+    currency: "MMK",
+  });
+  const [priceInput, setPriceInput] = useState("20000");
+  const [priceSaving, setPriceSaving] = useState(false);
+  const [priceSaved, setPriceSaved] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -159,6 +189,10 @@ export default function AdminPage() {
       setSavedItems(data.savedItems || []);
       setApiKeys(data.apiKeys || []);
       setNotifications(data.notifications || []);
+      if (data.settings) {
+        setAppSettings(data.settings);
+        setPriceInput(String(data.settings.price));
+      }
     } catch {
       setIsAdmin(false);
     }
@@ -229,6 +263,29 @@ export default function AdminPage() {
       alert("Failed to send notification");
     }
     setNotiSending(false);
+  };
+
+  const toggleMaintenance = async (enabled: boolean) => {
+    setAppSettings((prev) => ({ ...prev, maintenance_mode: enabled }));
+    await adminAction({
+      action: "toggle_maintenance",
+      enabled: String(enabled),
+    });
+  };
+
+  const toggleWaitlist = async (enabled: boolean) => {
+    setAppSettings((prev) => ({ ...prev, waitlist_mode: enabled }));
+    await adminAction({ action: "toggle_waitlist", enabled: String(enabled) });
+  };
+
+  const updatePrice = async () => {
+    const num = parseInt(priceInput, 10);
+    if (isNaN(num) || num < 0) return;
+    setPriceSaving(true);
+    await adminAction({ action: "update_price", price: String(num) });
+    setPriceSaving(false);
+    setPriceSaved(true);
+    setTimeout(() => setPriceSaved(false), 2000);
   };
 
   const handleLogout = async () => {
@@ -416,18 +473,20 @@ export default function AdminPage() {
         </div>
 
         {/* Search */}
-        {activeTab !== "analytics" && activeTab !== "notify" && (
-          <div className="relative mt-4 mb-4">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search users..."
-              className="w-full pl-11 pr-4 py-3 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 shadow-sm"
-            />
-          </div>
-        )}
+        {activeTab !== "analytics" &&
+          activeTab !== "notify" &&
+          activeTab !== "settings" && (
+            <div className="relative mt-4 mb-4">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search users..."
+                className="w-full pl-11 pr-4 py-3 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 shadow-sm"
+              />
+            </div>
+          )}
 
         {loading ? (
           <div className="flex items-center justify-center py-24">
@@ -943,6 +1002,11 @@ export default function AdminPage() {
                           </p>
                           <div className="flex items-center gap-2 mt-1">
                             {statusBadge(user.payment_status)}
+                            {user.price_paid != null && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 font-medium">
+                                {user.price_paid.toLocaleString()} MMK
+                              </span>
+                            )}
                             {user.phone && (
                               <span className="text-xs text-neutral-400">
                                 {user.phone}
@@ -1152,6 +1216,186 @@ export default function AdminPage() {
                       })}
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {/* SETTINGS */}
+            {activeTab === "settings" && (
+              <div className="max-w-lg mx-auto space-y-6 mt-4">
+                <div className="text-center">
+                  <h2 className="text-xl font-bold mb-1">App Settings</h2>
+                  <p className="text-sm text-neutral-500">
+                    Control maintenance mode, waitlist, and pricing
+                  </p>
+                </div>
+
+                {/* Mode toggles */}
+                <div className="space-y-3">
+                  {/* Maintenance Mode */}
+                  <div className="flex items-center justify-between p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/50 flex items-center justify-center">
+                        <Wrench className="w-5 h-5 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">
+                          Maintenance Mode
+                        </p>
+                        <p className="text-xs text-neutral-400">
+                          Only admin can access. All users see maintenance
+                          screen.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() =>
+                        toggleMaintenance(!appSettings.maintenance_mode)
+                      }
+                      className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${
+                        appSettings.maintenance_mode
+                          ? "bg-amber-500"
+                          : "bg-neutral-200 dark:bg-neutral-800"
+                      }`}
+                    >
+                      <motion.div
+                        className="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-sm"
+                        animate={{
+                          left: appSettings.maintenance_mode ? 22 : 2,
+                        }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 500,
+                          damping: 30,
+                        }}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Waitlist Mode */}
+                  <div className="flex items-center justify-between p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-950/50 border border-violet-200 dark:border-violet-800/50 flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-violet-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">Waitlist Mode</p>
+                        <p className="text-xs text-neutral-400">
+                          Presale: users sign up &amp; pay, but see waitlist
+                          screen.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => toggleWaitlist(!appSettings.waitlist_mode)}
+                      className={`relative w-12 h-7 rounded-full transition-colors duration-200 ${
+                        appSettings.waitlist_mode
+                          ? "bg-violet-500"
+                          : "bg-neutral-200 dark:bg-neutral-800"
+                      }`}
+                    >
+                      <motion.div
+                        className="absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-sm"
+                        animate={{ left: appSettings.waitlist_mode ? 22 : 2 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 500,
+                          damping: 30,
+                        }}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Price Editor */}
+                <div className="p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/50 flex items-center justify-center">
+                      <DollarSign className="w-5 h-5 text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">Pricing</p>
+                      <p className="text-xs text-neutral-400">
+                        Change price for welcome &amp; payment pages
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 relative">
+                      <input
+                        type="number"
+                        value={priceInput}
+                        onChange={(e) => {
+                          setPriceInput(e.target.value);
+                          setPriceSaved(false);
+                        }}
+                        className="w-full px-4 py-3 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10"
+                        min={0}
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-neutral-400 font-medium">
+                        MMK
+                      </span>
+                    </div>
+                    <motion.button
+                      onClick={updatePrice}
+                      disabled={priceSaving || priceSaved}
+                      className="px-5 py-3 rounded-xl bg-black dark:bg-white text-white dark:text-black text-sm font-semibold disabled:opacity-50 transition-opacity"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {priceSaving ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : priceSaved ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        "Save"
+                      )}
+                    </motion.button>
+                  </div>
+
+                  <p className="text-[10px] text-neutral-400 mt-3">
+                    Current price:{" "}
+                    <span className="font-bold">
+                      {appSettings.price.toLocaleString()}
+                    </span>{" "}
+                    {appSettings.currency}
+                  </p>
+                </div>
+
+                {/* Current status summary */}
+                <div className="p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-900/50 border border-dashed border-neutral-300 dark:border-neutral-700">
+                  <p className="text-[10px] uppercase tracking-wider text-neutral-400 font-semibold mb-3">
+                    Current Status
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="text-center">
+                      <p
+                        className={`text-sm font-bold ${appSettings.maintenance_mode ? "text-amber-500" : "text-emerald-500"}`}
+                      >
+                        {appSettings.maintenance_mode ? "ON" : "OFF"}
+                      </p>
+                      <p className="text-[10px] text-neutral-400">
+                        Maintenance
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p
+                        className={`text-sm font-bold ${appSettings.waitlist_mode ? "text-violet-500" : "text-emerald-500"}`}
+                      >
+                        {appSettings.waitlist_mode ? "ON" : "OFF"}
+                      </p>
+                      <p className="text-[10px] text-neutral-400">Waitlist</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold">
+                        {appSettings.price.toLocaleString()}
+                      </p>
+                      <p className="text-[10px] text-neutral-400">
+                        {appSettings.currency}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

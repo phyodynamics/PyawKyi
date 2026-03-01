@@ -15,6 +15,7 @@ import {
   Shield,
   Zap,
   Star,
+  Bell,
 } from "lucide-react";
 import { Marquee } from "@/components/ui/marquee";
 import { createClient } from "@/lib/supabase/client";
@@ -104,6 +105,9 @@ export default function WelcomePage() {
   const [loading, setLoading] = useState(false);
   const [avatars, setAvatars] = useState<UserAvatar[]>([]);
   const [userCount, setUserCount] = useState(0);
+  const [price, setPrice] = useState(20000);
+  const [currency, setCurrency] = useState("MMK");
+  const [showNotiPrompt, setShowNotiPrompt] = useState(false);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -127,6 +131,27 @@ export default function WelcomePage() {
       if (count !== null) setUserCount(count);
     };
     loadUsers();
+
+    // Fetch dynamic price
+    const loadSettings = async () => {
+      try {
+        const res = await fetch("/api/settings");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.price) setPrice(data.price);
+          if (data.currency) setCurrency(data.currency);
+        }
+      } catch {}
+    };
+    loadSettings();
+
+    // Web push notification prompt
+    const timer = setTimeout(() => {
+      if ("Notification" in window && Notification.permission === "default") {
+        setShowNotiPrompt(true);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -402,10 +427,10 @@ export default function WelcomePage() {
 
               <div className="flex items-baseline gap-1 mb-8">
                 <span className="text-5xl font-bold tracking-tight">
-                  20,000
+                  {price.toLocaleString()}
                 </span>
                 <span className="text-lg text-neutral-400 font-medium">
-                  MMK
+                  {currency}
                 </span>
               </div>
 
@@ -455,6 +480,51 @@ export default function WelcomePage() {
           © 2026 Pyaw Kyi. Built with ❤️ in Myanmar.
         </p>
       </footer>
+
+      {/* Web Push Notification Prompt */}
+      {showNotiPrompt && (
+        <motion.div
+          className="fixed bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-80 z-50 p-4 rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 shadow-2xl shadow-black/10 dark:shadow-black/40"
+          initial={{ opacity: 0, y: 30, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 30 }}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-black dark:bg-white flex items-center justify-center shrink-0">
+              <Bell className="w-4 h-4 text-white dark:text-black" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">Stay Updated</p>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Get notified when we launch new features.
+              </p>
+              <div className="flex items-center gap-2 mt-3">
+                <button
+                  onClick={async () => {
+                    try {
+                      const permission = await Notification.requestPermission();
+                      if (permission === "granted") {
+                        setShowNotiPrompt(false);
+                      }
+                    } catch {}
+                    setShowNotiPrompt(false);
+                  }}
+                  className="px-3.5 py-1.5 rounded-lg bg-black dark:bg-white text-white dark:text-black text-xs font-semibold hover:opacity-90 transition-opacity"
+                >
+                  Allow
+                </button>
+                <button
+                  onClick={() => setShowNotiPrompt(false)}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
+                >
+                  Not now
+                </button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </main>
   );
 }

@@ -138,6 +138,8 @@ export default function PendingPage() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const [userName, setUserName] = useState("");
+  const [price, setPrice] = useState(20000);
+  const [currency, setCurrency] = useState("MMK");
 
   useEffect(() => {
     const loadUser = async () => {
@@ -170,6 +172,19 @@ export default function PendingPage() {
       }
     };
     loadUser();
+
+    // Fetch dynamic price
+    const loadSettings = async () => {
+      try {
+        const res = await fetch("/api/settings");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.price) setPrice(data.price);
+          if (data.currency) setCurrency(data.currency);
+        }
+      } catch {}
+    };
+    loadSettings();
   }, []);
 
   const handleSubmitForm = async () => {
@@ -331,7 +346,7 @@ export default function PendingPage() {
                   whileTap={{ scale: 0.98 }}
                 >
                   <CreditCard className="w-4 h-4" />
-                  Get with 20,000 MMK
+                  Get with {price.toLocaleString()} {currency}
                 </motion.button>
                 <p className="text-xs text-neutral-400">
                   One-time payment · Lifetime access
@@ -489,7 +504,7 @@ export default function PendingPage() {
               <div className="text-center">
                 <h2 className="text-xl font-bold">Choose Payment Method</h2>
                 <p className="text-sm text-neutral-500 mt-1">
-                  20,000 MMK ဖြင့်ပိုင်ဆိုင်လိုက်ပါ
+                  {price.toLocaleString()} {currency} ဖြင့်ပိုင်ဆိုင်လိုက်ပါ
                 </p>
               </div>
 
@@ -515,7 +530,9 @@ export default function PendingPage() {
                     <p className="text-sm font-bold">
                       {method === "kbz_pay" ? "KBZ Pay" : "Wave Pay"}
                     </p>
-                    <p className="text-xs text-neutral-400 mt-1">20,000 MMK</p>
+                    <p className="text-xs text-neutral-400 mt-1">
+                      {price.toLocaleString()} {currency}
+                    </p>
                   </motion.button>
                 ))}
               </motion.div>

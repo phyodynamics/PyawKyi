@@ -37,26 +37,58 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // ═══════════════════════════════════════════════════
-  // BYPASS: Auth callback must always be accessible
+  // BYPASS: Always allow these routes
   // ═══════════════════════════════════════════════════
-  if (pathname.startsWith("/auth/callback")) {
+  if (pathname.startsWith("/auth/callback") || pathname.startsWith("/api")) {
     return supabaseResponse;
   }
 
-  // Allow API routes through — they enforce auth internally
-  if (pathname.startsWith("/api")) {
-    return supabaseResponse;
+  // ═══════════════════════════════════════════════════
+  // Fetch app settings (maintenance, waitlist modes)
+  // ═══════════════════════════════════════════════════
+  const { data: settings } = await supabase
+    .from("app_settings")
+    .select("maintenance_mode, waitlist_mode")
+    .eq("id", "global")
+    .single();
+
+  const maintenanceMode = settings?.maintenance_mode ?? false;
+  const waitlistMode = settings?.waitlist_mode ?? false;
+  const isAdmin = user?.email === process.env.ADMIN_EMAIL;
+
+  // ═══════════════════════════════════════════════════
+  // MAINTENANCE MODE — only admin can use the app
+  // Everyone else sees /maintenance
+  // ═══════════════════════════════════════════════════
+  if (maintenanceMode && !isAdmin) {
+    // Allow /maintenance and /welcome (for login)
+    if (pathname === "/maintenance") {
+      return supabaseResponse;
+    }
+    // If not logged in, allow /welcome so they can see something
+    if (!user && pathname === "/welcome") {
+      return supabaseResponse;
+    }
+    // Redirect everything else to /maintenance
+    const url = request.nextUrl.clone();
+    url.pathname = "/maintenance";
+    return NextResponse.redirect(url);
+  }
+
+  // If admin and maintenance is on, don't show /maintenance to admin
+  if (!maintenanceMode && pathname === "/maintenance") {
+    const url = request.nextUrl.clone();
+    url.pathname = user ? "/" : "/welcome";
+    return NextResponse.redirect(url);
   }
 
   // ═══════════════════════════════════════════════════
   // UNAUTHENTICATED users
   // ═══════════════════════════════════════════════════
   if (!user) {
-    // Unauthenticated users can ONLY access /welcome
     if (pathname === "/welcome") {
       return supabaseResponse;
     }
-    // Everything else → redirect to /welcome
     const url = request.nextUrl.clone();
     url.pathname = "/welcome";
     return NextResponse.redirect(url);
@@ -71,12 +103,47 @@ export async function middleware(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  const isAdmin = user.email === process.env.ADMIN_EMAIL;
   const isPaid = profile?.payment_status === "paid" || isAdmin;
   const hasGeminiKey = !!profile?.gemini_api_key;
 
+  // ═══════════════════════════════════════════════════
+  // WAITLIST MODE — users can sign up & pay, but
+  // paid users see /waitlist instead of the main app
+  // Admin is exempt.
+  // ═══════════════════════════════════════════════════
+  if (waitlistMode && !isAdmin) {
+    // Not paid → allow /pending (payment flow)
+    if (!isPaid) {
+      if (pathname === "/welcome") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/pending";
+        return NextResponse.redirect(url);
+      }
+      if (pathname === "/pending") {
+        return supabaseResponse;
+      }
+      const url = request.nextUrl.clone();
+      url.pathname = "/pending";
+      return NextResponse.redirect(url);
+    }
+
+    // Paid but waitlist on → show /waitlist
+    if (pathname === "/waitlist") {
+      return supabaseResponse;
+    }
+    const url = request.nextUrl.clone();
+    url.pathname = "/waitlist";
+    return NextResponse.redirect(url);
+  }
+
+  // If waitlist mode OFF but user visits /waitlist → redirect away
+  if (!waitlistMode && pathname === "/waitlist") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+
   // ─── Logged-in users must NEVER see /welcome ───
-  // Redirect them to the appropriate page based on their status
   if (pathname === "/welcome") {
     const url = request.nextUrl.clone();
     if (!isPaid) {
@@ -140,13 +207,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon)
-     * - public files (images, etc.)
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

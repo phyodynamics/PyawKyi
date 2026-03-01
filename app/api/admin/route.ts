@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
   const service = getServiceClient();
 
-  const [usersRes, subsRes, savedRes, apiKeysRes, notifsRes] =
+  const [usersRes, subsRes, savedRes, apiKeysRes, notifsRes, settingsRes] =
     await Promise.all([
       service
         .from("users")
@@ -70,6 +70,7 @@ export async function GET(request: NextRequest) {
         .from("notifications")
         .select("*")
         .order("created_at", { ascending: false }),
+      service.from("app_settings").select("*").eq("id", "global").single(),
     ]);
 
   return NextResponse.json({
@@ -78,6 +79,12 @@ export async function GET(request: NextRequest) {
     savedItems: savedRes.data || [],
     apiKeys: apiKeysRes.data || [],
     notifications: notifsRes.data || [],
+    settings: settingsRes.data || {
+      maintenance_mode: false,
+      waitlist_mode: false,
+      price: 20000,
+      currency: "MMK",
+    },
   });
 }
 
@@ -102,6 +109,13 @@ export async function POST(request: NextRequest) {
   switch (action) {
     case "approve_submission": {
       if (!submissionId || !userId) return errorResponse("Missing IDs", 400);
+      // Fetch current price to record what the user paid
+      const { data: currentSettings } = await service
+        .from("app_settings")
+        .select("price")
+        .eq("id", "global")
+        .single();
+      const currentPrice = currentSettings?.price ?? 20000;
       await Promise.all([
         service
           .from("payment_submissions")
@@ -116,6 +130,7 @@ export async function POST(request: NextRequest) {
           .update({
             payment_status: "paid",
             paid_at: new Date().toISOString(),
+            price_paid: currentPrice,
           })
           .eq("id", userId),
       ]);
@@ -185,6 +200,45 @@ export async function POST(request: NextRequest) {
       const { notificationId } = body;
       if (!notificationId) return errorResponse("Missing notification ID", 400);
       await service.from("notifications").delete().eq("id", notificationId);
+      break;
+    }
+
+    case "toggle_maintenance": {
+      const { enabled } = body;
+      await service
+        .from("app_settings")
+        .update({
+          maintenance_mode: enabled === true || enabled === "true",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", "global");
+      break;
+    }
+
+    case "toggle_waitlist": {
+      const { enabled: wlEnabled } = body;
+      await service
+        .from("app_settings")
+        .update({
+          waitlist_mode: wlEnabled === true || wlEnabled === "true",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", "global");
+      break;
+    }
+
+    case "update_price": {
+      const { price: newPrice } = body;
+      const priceNum = parseInt(newPrice, 10);
+      if (isNaN(priceNum) || priceNum < 0)
+        return errorResponse("Invalid price", 400);
+      await service
+        .from("app_settings")
+        .update({
+          price: priceNum,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", "global");
       break;
     }
 
