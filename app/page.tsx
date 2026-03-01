@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
-import { History, LogOut, X, Trash2, Code2 } from "lucide-react";
+import { History, LogOut, X, Trash2, Code2, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { WelcomeAnimation } from "@/components/welcome-animation";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -594,14 +594,24 @@ export default function Home() {
                 {/* Error message */}
                 <AnimatePresence>
                   {error && (
-                    <motion.p
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="text-sm text-destructive text-center"
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/20 max-w-sm w-full"
                     >
-                      {error}
-                    </motion.p>
+                      <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
+                      <p className="text-xs text-destructive font-medium leading-relaxed flex-1">
+                        {error}
+                      </p>
+                      <button
+                        onClick={() => setError(null)}
+                        className="text-destructive/60 hover:text-destructive transition-colors flex-shrink-0"
+                        aria-label="Dismiss error"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </motion.div>
                   )}
                 </AnimatePresence>
 
@@ -729,19 +739,27 @@ export default function Home() {
         onClose={() => setShowApiPanel(false)}
       />
 
-      {/* Error Toasts */}
-      <AnimatePresence>
-        {errors.map((error) => (
-          <ErrorToast
-            key={error.id}
-            message={error.message}
-            type={error.type}
-            onDismiss={() => dismissError(error.id)}
-            onRetry={error.onRetry}
-            autoDismiss={!error.onRetry}
-          />
-        ))}
-      </AnimatePresence>
+      {/* Error Toasts — stacked */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none flex flex-col-reverse items-end gap-2 p-4 sm:p-6">
+        <AnimatePresence>
+          {errors.map((error, index) => (
+            <motion.div
+              key={error.id}
+              layout
+              className="pointer-events-auto w-full sm:w-auto"
+              style={{ zIndex: 50 + index }}
+            >
+              <ErrorToast
+                message={error.message}
+                type={error.type}
+                onDismiss={() => dismissError(error.id)}
+                onRetry={error.onRetry}
+                autoDismiss={!error.onRetry}
+              />
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
       {/* Offline Indicator */}
       <AnimatePresence>

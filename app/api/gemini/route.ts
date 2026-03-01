@@ -60,10 +60,13 @@ async function callGeminiAPI(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
+      system_instruction: {
+        parts: [{ text: systemPrompt }],
+      },
       contents: [
         {
           role: "user",
-          parts: [{ text: `${systemPrompt}\n\n${userContent}` }],
+          parts: [{ text: userContent }],
         },
       ],
       generationConfig: {
@@ -71,17 +74,43 @@ async function callGeminiAPI(
         topK: 40,
         topP: 0.95,
         maxOutputTokens: 8192,
+        responseMimeType: "application/json",
       },
     }),
   });
 
   if (!response.ok) {
     const error = await response.text();
+    console.error(
+      `[Gemini API] Text call failed (${model}):`,
+      response.status,
+      error,
+    );
     throw new Error(`Gemini API error: ${response.status} - ${error}`);
   }
 
   const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+  // Check for blocked responses
+  if (data.candidates?.[0]?.finishReason === "SAFETY") {
+    console.error(`[Gemini API] Response blocked by safety filter (${model})`);
+    throw new Error(
+      "Response was blocked by safety filters. Please rephrase your request.",
+    );
+  }
+
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    console.error(
+      `[Gemini API] Empty response from model (${model}):`,
+      JSON.stringify(data).slice(0, 500),
+    );
+    throw new Error(
+      "No content generated. The model returned an empty response.",
+    );
+  }
+
+  return text;
 }
 
 async function callGeminiWithAudio(
@@ -95,12 +124,13 @@ async function callGeminiWithAudio(
 ): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-  const parts: Array<
+  // User content parts: audio + optional image
+  const userParts: Array<
     { text: string } | { inline_data: { mime_type: string; data: string } }
-  > = [{ text: systemPrompt }];
+  > = [];
 
   if (audioBase64) {
-    parts.push({
+    userParts.push({
       inline_data: {
         mime_type: mimeType,
         data: audioBase64,
@@ -110,7 +140,7 @@ async function callGeminiWithAudio(
 
   // Add image if provided (for craft mode)
   if (imageBase64 && imageMimeType) {
-    parts.push({
+    userParts.push({
       inline_data: {
         mime_type: imageMimeType,
         data: imageBase64,
@@ -118,16 +148,24 @@ async function callGeminiWithAudio(
     });
   }
 
+  // Add a text prompt so the model knows what to do with the audio
+  userParts.push({
+    text: "Process the audio input according to your instructions.",
+  });
+
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
+      system_instruction: {
+        parts: [{ text: systemPrompt }],
+      },
       contents: [
         {
           role: "user",
-          parts,
+          parts: userParts,
         },
       ],
       generationConfig: {
@@ -135,17 +173,43 @@ async function callGeminiWithAudio(
         topK: 40,
         topP: 0.95,
         maxOutputTokens: 8192,
+        responseMimeType: "application/json",
       },
     }),
   });
 
   if (!response.ok) {
     const error = await response.text();
+    console.error(
+      `[Gemini API] Audio call failed (${model}):`,
+      response.status,
+      error,
+    );
     throw new Error(`Gemini API error: ${response.status} - ${error}`);
   }
 
   const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+  // Check for blocked responses
+  if (data.candidates?.[0]?.finishReason === "SAFETY") {
+    console.error(`[Gemini API] Response blocked by safety filter (${model})`);
+    throw new Error(
+      "Response was blocked by safety filters. Please rephrase your request.",
+    );
+  }
+
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    console.error(
+      `[Gemini API] Empty response from model (${model}):`,
+      JSON.stringify(data).slice(0, 500),
+    );
+    throw new Error(
+      "No content generated. The model returned an empty response.",
+    );
+  }
+
+  return text;
 }
 
 // ═══════════════════════════════════════════════════
@@ -315,6 +379,7 @@ export async function POST(request: NextRequest) {
 
     for (const model of [primaryModel, fallbackModel]) {
       try {
+        console.log(`[Gemini API] Trying model: ${model}, isAudio: ${isAudio}`);
         if (isAudio && audioBase64) {
           result = await callGeminiWithAudio(
             systemPrompt,
@@ -333,10 +398,19 @@ export async function POST(request: NextRequest) {
             userApiKey,
           );
         }
-        if (result && result.trim().length > 0) break;
+        if (result && result.trim().length > 0) {
+          console.log(
+            `[Gemini API] Success with model: ${model}, response length: ${result.length}`,
+          );
+          break;
+        }
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
+        console.error(
+          `[Gemini API] Model ${model} failed:`,
+          errorMessage.slice(0, 300),
+        );
         const statusMatch = errorMessage.match(/(\d{3})/);
         const statusCode = statusMatch ? parseInt(statusMatch[1], 10) : 500;
         lastError = parseApiError(statusCode, errorMessage);
@@ -348,6 +422,10 @@ export async function POST(request: NextRequest) {
       const errorMessage =
         lastError?.message ||
         "Failed to process your request. Please try again.";
+      console.error(
+        `[Gemini API] All models failed. Last error:`,
+        errorMessage,
+      );
       return errorResponse(errorMessage, 500);
     }
 

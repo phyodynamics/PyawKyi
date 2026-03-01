@@ -90,10 +90,13 @@ async function callGemini(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      system_instruction: {
+        parts: [{ text: systemPrompt }],
+      },
       contents: [
         {
           role: "user",
-          parts: [{ text: `${systemPrompt}\n\n${userContent}` }],
+          parts: [{ text: userContent }],
         },
       ],
       generationConfig: {
@@ -101,17 +104,33 @@ async function callGemini(
         topK: 40,
         topP: 0.95,
         maxOutputTokens: 8192,
+        responseMimeType: "application/json",
       },
     }),
   });
 
   if (!response.ok) {
     const error = await response.text();
+    console.error(
+      `[V1 API] Text call failed (${model}):`,
+      response.status,
+      error,
+    );
     throw new Error(`Gemini API error: ${response.status} - ${error}`);
   }
 
   const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    console.error(
+      `[V1 API] Empty response from model (${model}):`,
+      JSON.stringify(data).slice(0, 500),
+    );
+    throw new Error(
+      "No content generated. The model returned an empty response.",
+    );
+  }
+  return text;
 }
 
 async function callGeminiWithAudio(
@@ -124,41 +143,64 @@ async function callGeminiWithAudio(
   imageMimeType?: string,
 ): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  const parts: Array<
+  const userParts: Array<
     { text: string } | { inline_data: { mime_type: string; data: string } }
-  > = [{ text: systemPrompt }];
+  > = [];
 
   if (audioBase64) {
-    parts.push({ inline_data: { mime_type: mimeType, data: audioBase64 } });
+    userParts.push({ inline_data: { mime_type: mimeType, data: audioBase64 } });
   }
 
   if (imageBase64 && imageMimeType) {
-    parts.push({
+    userParts.push({
       inline_data: { mime_type: imageMimeType, data: imageBase64 },
     });
   }
+
+  userParts.push({
+    text: "Process the audio input according to your instructions.",
+  });
 
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      contents: [{ role: "user", parts }],
+      system_instruction: {
+        parts: [{ text: systemPrompt }],
+      },
+      contents: [{ role: "user", parts: userParts }],
       generationConfig: {
         temperature: 0.7,
         topK: 40,
         topP: 0.95,
         maxOutputTokens: 8192,
+        responseMimeType: "application/json",
       },
     }),
   });
 
   if (!response.ok) {
     const error = await response.text();
+    console.error(
+      `[V1 API] Audio call failed (${model}):`,
+      response.status,
+      error,
+    );
     throw new Error(`Gemini API error: ${response.status} - ${error}`);
   }
 
   const data = await response.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    console.error(
+      `[V1 API] Empty response from model (${model}):`,
+      JSON.stringify(data).slice(0, 500),
+    );
+    throw new Error(
+      "No content generated. The model returned an empty response.",
+    );
+  }
+  return text;
 }
 
 function cleanResponse(raw: string): string {
