@@ -100,7 +100,7 @@ async function callGemini(
         temperature: 0.7,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 65536,
+        maxOutputTokens: 32768,
       },
     }),
   });
@@ -147,7 +147,7 @@ async function callGeminiWithAudio(
         temperature: 0.7,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 65536,
+        maxOutputTokens: 32768,
       },
     }),
   });
