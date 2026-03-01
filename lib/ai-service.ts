@@ -249,7 +249,7 @@ export async function processBuild(audioBlob: Blob): Promise<BuildResult> {
   try {
     const audioBase64 = await blobToBase64(audioBlob);
 
-    // First pass: Generate HTML code
+    // Generate HTML code in a single pass
     const initialResult = await callAPI<BuildResult>({
       systemPrompt: SYSTEM_PROMPTS.build,
       audioBase64,
@@ -257,15 +257,31 @@ export async function processBuild(audioBlob: Blob): Promise<BuildResult> {
       isAudio: true,
     });
 
+    // Extract code from various possible response shapes
     const resultAny = initialResult as unknown as Record<string, string>;
-    const generatedCode =
-      initialResult.html_code ||
-      resultAny.fixed_code ||
-      (resultAny.raw && resultAny.raw.includes("<!DOCTYPE")
-        ? resultAny.raw
-        : null);
+    let generatedCode =
+      initialResult.html_code || resultAny.fixed_code || resultAny.raw || "";
 
-    if (!generatedCode) {
+    // If raw result looks like HTML, use it directly
+    if (!generatedCode && typeof resultAny === "string") {
+      generatedCode = resultAny;
+    }
+
+    // Clean up: if the code is wrapped in markdown code blocks
+    if (generatedCode.startsWith("```")) {
+      generatedCode = generatedCode
+        .replace(/^```(?:html)?\s*\n?/, "")
+        .replace(/\n?```\s*$/, "");
+    }
+
+    // Validate it looks like HTML
+    if (
+      !generatedCode ||
+      (!generatedCode.includes("<!DOCTYPE") &&
+        !generatedCode.includes("<html") &&
+        !generatedCode.includes("<div") &&
+        !generatedCode.includes("<body"))
+    ) {
       throw new APIError(
         "No code was generated. Please describe your app clearly and try again.",
         500,
@@ -273,25 +289,10 @@ export async function processBuild(audioBlob: Blob): Promise<BuildResult> {
       );
     }
 
-    // Second pass: Fix and polish the HTML code
-    try {
-      const fixedResult = await callAPI<{ fixed_code: string }>({
-        systemPrompt: BUILD_FIX_PROMPT,
-        userContent: `original_request: "[Audio transcription - the user's voice command]"\n\ngenerated_code: "${generatedCode.replace(/"/g, '\\"')}"`,
-        isAudio: false,
-      });
-
-      return {
-        html_code: generatedCode,
-        fixed_code: fixedResult.fixed_code || generatedCode,
-      };
-    } catch {
-      // If second pass fails, return the initial code
-      return {
-        html_code: generatedCode,
-        fixed_code: generatedCode,
-      };
-    }
+    return {
+      html_code: generatedCode,
+      fixed_code: generatedCode,
+    };
   } catch (error) {
     if (
       error instanceof AudioProcessingError ||
