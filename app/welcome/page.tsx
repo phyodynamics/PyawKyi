@@ -12,11 +12,11 @@ import {
   Mic,
   ArrowRight,
   Check,
+  Shield,
+  Zap,
+  Star,
 } from "lucide-react";
-import { StaggerBlurEffect } from "@/components/ui/stagger-blur-effect";
-import { SocialProofAvatars } from "@/components/ui/social-proof-avatars";
 import { Marquee } from "@/components/ui/marquee";
-import { GradientSlideButton } from "@/components/ui/gradient-slide-button";
 import { createClient } from "@/lib/supabase/client";
 
 // Google Logo SVG Component
@@ -51,42 +51,47 @@ const features = [
   {
     icon: Sparkles,
     title: "Polish",
+    subtitle: "Voice → Text",
     description:
-      "စကားပြောဆိုချက်တွေကို ဖတ်ရလွယ်ကူတဲ့ စာသားအဖြစ် ပြောင်းပေးပါတယ်။ Grammar နဲ့ သတ်ပုံအမှားတွေကိုပါ အလွယ်တကူ ပြင်ဆင်ပေးမှာပါ။",
+      "စကားပြောဆိုချက်တွေကို ဖတ်ရလွယ်ကူတဲ့ စာသားအဖြစ် ပြောင်းပေးပါတယ်။",
   },
   {
     icon: ClipboardList,
     title: "Plan",
+    subtitle: "Voice → Schedule",
     description:
-      "စိတ်ကူးထဲရှိတဲ့ အကြောင်းအရာတွေကို Action Plan, Schedule နဲ့ Checklist တွေအဖြစ် အသေးစိတ် အစီအစဉ်ဆွဲပေးပါတယ်။",
+      "စိတ်ကူးထဲရှိတဲ့ အကြောင်းအရာတွေကို Action Plan, Checklist တွေအဖြစ် ဆွဲပေးပါတယ်။",
   },
   {
     icon: Palette,
     title: "Craft",
+    subtitle: "Voice → Content",
     description:
-      "သင်ပြောလိုက်တဲ့ စကားတွေကို လူကြိုက်များစေမယ့် Social Media Post တွေအဖြစ် Emoji, Hashtag တွေနဲ့တကွ ပြင်ဆင်ပေးပါတယ်။",
+      "ပြောလိုက်တဲ့ စကားတွေကို Social Media Post တွေအဖြစ် Emoji, Hashtag တွေနဲ့ ပြင်ဆင်ပေးပါတယ်။",
   },
   {
     icon: Code,
     title: "Build",
+    subtitle: "Voice → Code",
     description:
-      "App Idea တွေကို ပြောပြလိုက်ရုံနဲ့ အလုပ်လုပ်လို့ရတဲ့ HTML Code တွေကို ချက်ချင်း ရေးသားပေးမှာ ဖြစ်ပါတယ်။",
+      "App Idea တွေကို ပြောပြလိုက်ရုံနဲ့ အလုပ်လုပ်တဲ့ HTML Code တွေကို ရေးသားပေးမှာ ဖြစ်ပါတယ်။",
   },
   {
     icon: BookOpen,
     title: "Learn",
+    subtitle: "Voice → Notes",
     description:
-      "ရှည်လျားတဲ့ စာတွေကို အလွယ်တကူ မှတ်မိနိုင်အောင် Study Notes, Key Concepts တွေနဲ့ Flashcards တွေ ဖန်တီးပေးပါတယ်။",
+      "ရှည်လျားတဲ့ စာတွေကို Study Notes, Flashcards တွေ ဖန်တီးပေးပါတယ်။",
   },
 ];
 
 const pricingFeatures = [
-  "Modes ၅ မျိုး (Polish, Plan, Craft, Build, Learn)",
-  "Burmese & English Support",
-  "Unlimited Voice Input",
-  "Save & History",
-  "PyawKyi API Key (Apple Shortcuts & Integrations)",
-  "Lifetime Updates",
+  { text: "Modes ၅ မျိုး (Polish, Plan, Craft, Build, Learn)", icon: Zap },
+  { text: "Burmese & English Support", icon: Star },
+  { text: "Unlimited Voice Input", icon: Mic },
+  { text: "Save & History", icon: Shield },
+  { text: "PyawKyi API Key (Apple Shortcuts & Integrations)", icon: Code },
+  { text: "Lifetime Updates", icon: Sparkles },
 ];
 
 interface UserAvatar {
@@ -100,7 +105,6 @@ export default function WelcomePage() {
   const [avatars, setAvatars] = useState<UserAvatar[]>([]);
   const [userCount, setUserCount] = useState(0);
 
-  // Load real user avatars from Supabase
   useEffect(() => {
     const loadUsers = async () => {
       const supabase = createClient();
@@ -120,9 +124,7 @@ export default function WelcomePage() {
           }));
         setAvatars(realAvatars);
       }
-      if (count !== null) {
-        setUserCount(count);
-      }
+      if (count !== null) setUserCount(count);
     };
     loadUsers();
   }, []);
@@ -154,8 +156,11 @@ export default function WelcomePage() {
 
   return (
     <main className="min-h-screen bg-white dark:bg-black text-black dark:text-white overflow-hidden">
+      {/* Subtle background grid */}
+      <div className="fixed inset-0 bg-[linear-gradient(rgba(0,0,0,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.02)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px] pointer-events-none" />
+
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-5 py-4 md:px-8 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-neutral-100 dark:border-neutral-900">
+      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-5 py-4 md:px-8 bg-white/70 dark:bg-black/70 backdrop-blur-xl border-b border-neutral-100 dark:border-neutral-900">
         <div className="flex items-center gap-2.5">
           <Image
             src="/pyaw_kyi.png"
@@ -172,7 +177,7 @@ export default function WelcomePage() {
         <button
           onClick={handleGoogleLogin}
           disabled={loading}
-          className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full border border-neutral-200 dark:border-neutral-800 text-sm font-medium hover:bg-neutral-50 dark:hover:bg-neutral-950 transition-colors"
+          className="hidden sm:flex items-center gap-2 px-5 py-2.5 rounded-full bg-black dark:bg-white text-white dark:text-black text-sm font-medium hover:opacity-90 disabled:opacity-50 transition-all"
         >
           <GoogleLogo className="w-4 h-4" />
           {loading ? "Connecting..." : "Sign In"}
@@ -181,30 +186,40 @@ export default function WelcomePage() {
 
       {/* Hero Section */}
       <section className="relative flex flex-col items-center justify-center min-h-screen px-4 pt-24 pb-20">
-        <div className="relative z-10 flex flex-col items-center gap-7 max-w-2xl">
+        {/* Decorative gradient blobs */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-neutral-200/40 dark:bg-neutral-800/20 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-neutral-300/30 dark:bg-neutral-700/15 rounded-full blur-[100px] pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col items-center gap-8 max-w-2xl">
           {/* Badge */}
           <motion.div
-            className="flex items-center gap-2 px-4 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-800"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-2.5 px-5 py-2 rounded-full border border-neutral-200 dark:border-neutral-800 bg-white/60 dark:bg-black/60 backdrop-blur-sm"
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ delay: 0.3, duration: 0.5 }}
           >
             <Mic className="w-3.5 h-3.5 text-neutral-500" />
             <span className="text-xs font-medium text-neutral-500">
               Voice-Powered AI Tool
             </span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           </motion.div>
 
           {/* Animated title */}
           <div className="text-center">
-            <StaggerBlurEffect className="text-5xl sm:text-7xl md:text-8xl font-bold tracking-tight">
+            <motion.h1
+              className="text-5xl sm:text-7xl md:text-8xl font-bold tracking-tight"
+              initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              transition={{ delay: 0.4, duration: 0.7 }}
+            >
               Pyaw Kyi
-            </StaggerBlurEffect>
+            </motion.h1>
             <motion.p
               className="mt-3 text-lg sm:text-xl text-neutral-400 font-light"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8, duration: 0.5 }}
+              transition={{ delay: 0.7, duration: 0.5 }}
             >
               ပြောလိုက်ရုံပါပဲ · Just Say It
             </motion.p>
@@ -215,60 +230,67 @@ export default function WelcomePage() {
             className="text-center text-base sm:text-lg text-neutral-500 max-w-lg leading-relaxed"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1, duration: 0.5 }}
+            transition={{ delay: 0.9, duration: 0.5 }}
           >
             သင့်အသံကို AI ကနေတဆင့် သပ်ရပ်တဲ့ စာသားတွေ၊ စနစ်ကျတဲ့ Action Plan
-            တွေ၊ ဆွဲဆောင်မှုရှိတဲ့ Social Media ပို့စ်တွေနဲ့အတူ
-            အလုပ်လုပ်နိုင်တဲ့ Website Code တွေအဖြစ် အတိကျဆုံး ပြောင်းလဲပေးမှာပါ။
+            တွေ၊ ဆွဲဆောင်မှုရှိတဲ့ Social Media ပို့စ်တွေနဲ့ Website Code
+            တွေအဖြစ် ပြောင်းလဲပေးမှာပါ။
           </motion.p>
 
-          {/* CTA Button with Google Logo */}
+          {/* CTA Button */}
           <motion.div
             className="flex flex-col items-center gap-4 w-full max-w-xs"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.2, duration: 0.5 }}
+            transition={{ delay: 1.1, duration: 0.5 }}
           >
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 dark:bg-red-950/50 dark:text-red-400 px-4 py-2 rounded-xl w-full text-center">
+              <p className="text-sm text-red-600 bg-red-50 dark:bg-red-950/50 dark:text-red-400 px-4 py-2.5 rounded-xl w-full text-center">
                 {error}
               </p>
             )}
-            <GradientSlideButton
+            <motion.button
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl text-sm font-semibold h-12"
-              colorFrom="#000000"
-              colorTo="#333333"
+              className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-black dark:bg-white text-white dark:text-black text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all shadow-lg shadow-black/10 dark:shadow-white/5"
+              whileHover={{ scale: 1.02, y: -1 }}
+              whileTap={{ scale: 0.98 }}
             >
               <GoogleLogo className="w-5 h-5" />
               {loading ? "Connecting..." : "Continue with Google"}
-            </GradientSlideButton>
+              {!loading && <ArrowRight className="w-4 h-4" />}
+            </motion.button>
             <p className="text-xs text-neutral-400 text-center">
               အကောင့်ဖွင့်ရန် အခမဲ့ · တစ်ကြိမ်ပေးသွင်းရုံဖြင့်
               တစ်သက်တာအသုံးပြုနိုင်သည်
             </p>
           </motion.div>
 
-          {/* Social Proof - Real users from Supabase */}
+          {/* Social Proof */}
           {avatars.length > 0 && (
             <motion.div
-              className="flex flex-col items-center gap-1"
+              className="flex items-center gap-3"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.5, duration: 0.5 }}
+              transition={{ delay: 1.4, duration: 0.5 }}
             >
-              <SocialProofAvatars
-                avatars={avatars}
-                extraCount={userCount > 5 ? userCount - 5 : undefined}
-                stars={false}
-              >
-                <p className="text-xs text-neutral-400">
-                  {userCount > 0
-                    ? `${userCount} users already using PyawKyi`
-                    : "Join creators using PyawKyi"}
-                </p>
-              </SocialProofAvatars>
+              <div className="flex -space-x-2.5">
+                {avatars.slice(0, 5).map((avatar, i) => (
+                  <Image
+                    key={i}
+                    src={avatar.src}
+                    alt={avatar.alt}
+                    width={32}
+                    height={32}
+                    className="w-8 h-8 rounded-full border-2 border-white dark:border-black object-cover"
+                  />
+                ))}
+              </div>
+              <p className="text-xs text-neutral-400">
+                {userCount > 0
+                  ? `${userCount}+ users already joined`
+                  : "Join creators using PyawKyi"}
+              </p>
             </motion.div>
           )}
         </div>
@@ -276,7 +298,7 @@ export default function WelcomePage() {
 
       {/* Features Section */}
       <section className="relative px-4 py-24 md:px-8 border-t border-neutral-100 dark:border-neutral-900">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <motion.div
             className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}
@@ -284,7 +306,10 @@ export default function WelcomePage() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <h2 className="text-2xl sm:text-3xl font-bold mb-3">
+            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-neutral-400 mb-4">
+              Features
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3">
               PyawKyi နဲ့ ဘာတွေလုပ်လို့ရလဲ
             </h2>
             <p className="text-neutral-500 max-w-md mx-auto">
@@ -293,20 +318,27 @@ export default function WelcomePage() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {features.map((feature, index) => (
               <motion.div
                 key={feature.title}
-                className="group relative p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 hover:border-black dark:hover:border-white transition-all duration-300"
+                className="group relative p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 hover:border-neutral-400 dark:hover:border-neutral-600 transition-all duration-300 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-white/5"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: index * 0.1, duration: 0.5 }}
+                transition={{ delay: index * 0.08, duration: 0.5 }}
               >
-                <div className="w-10 h-10 rounded-xl bg-black dark:bg-white flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <feature.icon className="w-5 h-5 text-white dark:text-black" />
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-black dark:bg-white flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <feature.icon className="w-5 h-5 text-white dark:text-black" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold">{feature.title}</h3>
+                    <p className="text-[10px] font-medium text-neutral-400 uppercase tracking-wider">
+                      {feature.subtitle}
+                    </p>
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
                 <p className="text-sm text-neutral-500 leading-relaxed">
                   {feature.description}
                 </p>
@@ -340,7 +372,10 @@ export default function WelcomePage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-2xl sm:text-3xl font-bold mb-2">
+            <span className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-neutral-400 mb-4">
+              Pricing
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-2">
               Simple Pricing
             </h2>
             <p className="text-neutral-500 text-sm">
@@ -349,49 +384,73 @@ export default function WelcomePage() {
           </motion.div>
 
           <motion.div
-            className="p-8 rounded-2xl border-2 border-black dark:border-white"
+            className="relative p-8 rounded-3xl border-2 border-black dark:border-white overflow-hidden"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500 mb-4">
-              Lifetime Access
-            </p>
-            <div className="flex items-baseline gap-1 mb-6">
-              <span className="text-5xl font-bold">20,000</span>
-              <span className="text-lg text-neutral-400 font-medium">MMK</span>
-            </div>
+            {/* Subtle gradient inside card */}
+            <div className="absolute inset-0 bg-gradient-to-br from-neutral-50 to-white dark:from-neutral-950 dark:to-black pointer-events-none" />
 
-            {/* Pricing features */}
-            <div className="space-y-3 mb-8">
-              {pricingFeatures.map((feat) => (
-                <div key={feat} className="flex items-center gap-2.5">
-                  <div className="w-5 h-5 rounded-full bg-black dark:bg-white flex items-center justify-center shrink-0">
-                    <Check className="w-3 h-3 text-white dark:text-black" />
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-5">
+                <span className="px-3 py-1 rounded-full bg-black dark:bg-white text-white dark:text-black text-[10px] font-bold uppercase tracking-widest">
+                  Lifetime Access
+                </span>
+              </div>
+
+              <div className="flex items-baseline gap-1 mb-8">
+                <span className="text-5xl font-bold tracking-tight">
+                  20,000
+                </span>
+                <span className="text-lg text-neutral-400 font-medium">
+                  MMK
+                </span>
+              </div>
+
+              {/* Pricing features */}
+              <div className="space-y-3.5 mb-8">
+                {pricingFeatures.map((feat) => (
+                  <div key={feat.text} className="flex items-center gap-3">
+                    <div className="w-5 h-5 rounded-full bg-black dark:bg-white flex items-center justify-center shrink-0">
+                      <Check className="w-3 h-3 text-white dark:text-black" />
+                    </div>
+                    <span className="text-sm text-neutral-600 dark:text-neutral-400">
+                      {feat.text}
+                    </span>
                   </div>
-                  <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                    {feat}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            <button
-              onClick={handleGoogleLogin}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl bg-black text-white dark:bg-white dark:text-black text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-all"
-            >
-              <GoogleLogo className="w-4 h-4" />
-              {loading ? "Connecting..." : "Get Started"}
-              {!loading && <ArrowRight className="w-4 h-4" />}
-            </button>
+              <motion.button
+                onClick={handleGoogleLogin}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl bg-black text-white dark:bg-white dark:text-black text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-all"
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+              >
+                <GoogleLogo className="w-4 h-4" />
+                {loading ? "Connecting..." : "Get Started"}
+                {!loading && <ArrowRight className="w-4 h-4" />}
+              </motion.button>
+            </div>
           </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="px-4 py-8 text-center border-t border-neutral-100 dark:border-neutral-900">
+      <footer className="px-4 py-10 text-center border-t border-neutral-100 dark:border-neutral-900">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <Image
+            src="/pyaw_kyi.png"
+            alt="Pyaw Kyi"
+            width={20}
+            height={20}
+            className="w-5 h-5 object-contain opacity-50"
+          />
+          <span className="text-xs text-neutral-400 font-medium">Pyaw Kyi</span>
+        </div>
         <p className="text-xs text-neutral-400">
           © 2026 Pyaw Kyi. Built with ❤️ in Myanmar.
         </p>

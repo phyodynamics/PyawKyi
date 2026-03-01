@@ -3,71 +3,59 @@
 import { useState, useEffect, useCallback, memo } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Phone, Mail, User, LogOut, Clock } from "lucide-react";
+import {
+  ArrowLeft,
+  Phone,
+  Mail,
+  User,
+  LogOut,
+  Clock,
+  CheckCircle2,
+  MessageCircle,
+  RefreshCw,
+  Sparkles,
+  CreditCard,
+} from "lucide-react";
 import { Marquee } from "@/components/ui/marquee";
-import { GradientSlideButton } from "@/components/ui/gradient-slide-button";
 import { SwipeButton } from "@/components/ui/swipe-button";
 import { createClient } from "@/lib/supabase/client";
 
 type Step = "intro" | "form" | "payment" | "waiting";
 
-// Burmese reviews for the animated list
 const reviews = [
   {
     name: "Khant Si Thu",
     text: "Pyaw Kyi က သုံးရတာ တကယ်လန်းတယ်။ Voice ကနေ Text ပြောင်းတဲ့နေရာမှာ မြန်သလို တိကျမှုကလည်း တော်တော်မိုက်တယ်။",
-    stars: 5,
   },
   {
     name: "Su Myat Noe",
     text: "Social Media Post တွေ ရေးရတာ အရင်ကထက် အများကြီး ပိုလွယ်သွားတယ်။ အထူးသဖြင့် Craft Mode ကို တော်တော်လေး သဘောကျမိတယ်။",
-    stars: 5,
   },
   {
     name: "Ye Min Aung",
     text: "Plan Mode နဲ့ Schedule တွေ ဆွဲလိုက်တိုင်း အလုပ်တွေက ပိုပြီး စနစ်ကျလာတယ်။ ရုံးသမားတွေအတွက် တော်တော်အဆင်ပြေတယ်။ 👌",
-    stars: 5,
   },
   {
     name: "Hnin Wai Phyo",
-    text: "Build Mode နဲ့ Mini App တွေကို လွယ်လွယ်ကူကူ ဖန်တီးလို့ရတယ်။ ကိုယ်က Developer မဟုတ်ပေမယ့် ကိုယ်ပိုင် App တွေ ရေးလို့ရလာပြီလေ။",
-    stars: 4,
+    text: "Build Mode နဲ့ Mini App တွေကို လွယ်လွယ်ကူကူ ဖန်တီးလို့ရတယ်။ ကိုယ်ပိုင် App တွေ ရေးလို့ရလာပြီလေ။",
   },
   {
     name: "Aung Ko Min",
     text: "၂၀,၀၀၀ ကျပ်နဲ့ Lifetime Access ရတာကတော့ တကယ်တန်တဲ့ ရင်းနှီးမြုပ်နှံမှုပဲ။ သုံးရတာ တော်တော်လေး အားရတယ်။",
-    stars: 5,
   },
   {
     name: "Thida Kyaw",
     text: "မြန်မာလိုပါ ပြောလို့ရတာက အကြိုက်ဆုံးပဲ။ English နဲ့ Myanmar နှစ်မျိုးလုံး ရောပြောရင်တောင် AI က သေချာနားလည်ပေးတယ်။",
-    stars: 5,
   },
   {
     name: "Zaw Lin Htun",
-    text: "Polish Mode က Meeting မှတ်တမ်းတွေကို သပ်သပ်ရပ်ရပ်ဖြစ်အောင် ပြင်ပေးတာ တော်တော်အသုံးဝင်တယ်။ လက်တွေ့လုပ်ငန်းခွင်မှာ တကယ်အဆင်ပြေတယ်။",
-    stars: 4,
+    text: "Polish Mode က Meeting မှတ်တမ်းတွေကို သပ်သပ်ရပ်ရပ်ဖြစ်အောင် ပြင်ပေးတာ တော်တော်အသုံးဝင်တယ်။",
   },
   {
     name: "Ei Mon Kyaw",
     text: "Voice to App က တကယ် အံ့ဩစရာပဲ။ စကားပြောပြလိုက်ရုံနဲ့ Website တစ်ခု ချက်ချင်း ထွက်လာတာ ရူးချင်စရာပဲ။ 🚀",
-    stars: 5,
   },
 ];
-
-// Text animation variants
-const textVariants = {
-  hidden: { opacity: 0, y: 15 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      delay: i * 0.08,
-      duration: 0.5,
-      ease: [0.25, 0.4, 0.25, 1] as const,
-    },
-  }),
-};
 
 const ReviewCard = memo(function ReviewCard({
   name,
@@ -75,17 +63,68 @@ const ReviewCard = memo(function ReviewCard({
 }: {
   name: string;
   text: string;
-  stars: number;
 }) {
   return (
-    <div className="w-80 shrink-0 px-5 py-4 rounded-2xl bg-neutral-100/80 dark:bg-neutral-900/80">
-      <p className="text-sm font-semibold mb-1.5">{name}</p>
+    <div className="w-80 shrink-0 px-5 py-4 rounded-2xl bg-neutral-100/80 dark:bg-neutral-900/80 border border-neutral-200/50 dark:border-neutral-800/50">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-6 h-6 rounded-full bg-black dark:bg-white flex items-center justify-center text-[10px] font-bold text-white dark:text-black">
+          {name[0]}
+        </div>
+        <p className="text-sm font-semibold">{name}</p>
+      </div>
       <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
         {text}
       </p>
     </div>
   );
 });
+
+// Step indicator component
+function StepIndicator({
+  current,
+  steps,
+}: {
+  current: number;
+  steps: string[];
+}) {
+  return (
+    <div className="flex items-center gap-2 mb-8">
+      {steps.map((label, i) => (
+        <div key={label} className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <div
+              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                i < current
+                  ? "bg-black dark:bg-white text-white dark:text-black"
+                  : i === current
+                    ? "bg-black dark:bg-white text-white dark:text-black ring-4 ring-black/10 dark:ring-white/10"
+                    : "bg-neutral-100 dark:bg-neutral-900 text-neutral-400 border border-neutral-200 dark:border-neutral-800"
+              }`}
+            >
+              {i < current ? <CheckCircle2 className="w-3.5 h-3.5" /> : i + 1}
+            </div>
+            <span
+              className={`text-xs font-medium hidden sm:block ${
+                i <= current ? "text-foreground" : "text-neutral-400"
+              }`}
+            >
+              {label}
+            </span>
+          </div>
+          {i < steps.length - 1 && (
+            <div
+              className={`w-8 sm:w-12 h-px transition-colors duration-300 ${
+                i < current
+                  ? "bg-black dark:bg-white"
+                  : "bg-neutral-200 dark:bg-neutral-800"
+              }`}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function PendingPage() {
   const [step, setStep] = useState<Step>("intro");
@@ -184,10 +223,16 @@ export default function PendingPage() {
     window.location.href = "/welcome";
   };
 
+  const stepIndex =
+    step === "intro" ? 0 : step === "form" ? 1 : step === "payment" ? 2 : 3;
+
   return (
     <main className="min-h-screen bg-white dark:bg-black text-black dark:text-white">
+      {/* Subtle background */}
+      <div className="fixed inset-0 bg-[linear-gradient(rgba(0,0,0,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.015)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:60px_60px] pointer-events-none" />
+
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-5 py-4 md:px-8 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-neutral-100 dark:border-neutral-900">
+      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-5 py-4 md:px-8 bg-white/70 dark:bg-black/70 backdrop-blur-xl border-b border-neutral-100 dark:border-neutral-900">
         <div className="flex items-center gap-2.5">
           <Image
             src="/pyaw_kyi.png"
@@ -202,7 +247,6 @@ export default function PendingPage() {
           </span>
         </div>
         <div className="flex items-center gap-3">
-          {/* User profile in header */}
           {userAvatar && (
             <div className="flex items-center gap-2">
               <Image
@@ -231,7 +275,7 @@ export default function PendingPage() {
       {/* Content */}
       <div className="flex flex-col items-center justify-center min-h-screen px-4 pt-24 pb-16">
         <AnimatePresence mode="wait">
-          {/* Step 1: Intro with Animated Reviews */}
+          {/* Step 1: Intro */}
           {step === "intro" && (
             <motion.div
               key="intro"
@@ -241,22 +285,33 @@ export default function PendingPage() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
             >
-              <div className="text-center space-y-3">
-                <motion.h1
-                  className="text-2xl sm:text-3xl font-bold"
-                  custom={0}
-                  variants={textVariants}
-                  initial="hidden"
-                  animate="visible"
+              <div className="text-center space-y-4">
+                <motion.div
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 }}
                 >
-                  Unlock the Full Power of Pyaw Kyi
+                  <Sparkles className="w-3.5 h-3.5 text-neutral-500" />
+                  <span className="text-xs font-medium text-neutral-500">
+                    Premium Access
+                  </span>
+                </motion.div>
+
+                <motion.h1
+                  className="text-3xl sm:text-4xl font-bold tracking-tight"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                >
+                  Unlock the Full Power
                 </motion.h1>
+
                 <motion.p
-                  className="text-neutral-500 text-sm sm:text-base max-w-sm mx-auto"
-                  custom={1}
-                  variants={textVariants}
-                  initial="hidden"
-                  animate="visible"
+                  className="text-neutral-500 text-sm sm:text-base max-w-sm mx-auto leading-relaxed"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 }}
                 >
                   Get lifetime access to all premium features — Polish, Plan,
                   Craft, Build, and Learn — with a single one-time payment.
@@ -264,27 +319,27 @@ export default function PendingPage() {
               </div>
 
               <motion.div
-                className="flex flex-col items-center gap-2"
-                custom={2}
-                variants={textVariants}
-                initial="hidden"
-                animate="visible"
+                className="flex flex-col items-center gap-3 w-full max-w-xs"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
               >
-                <GradientSlideButton
+                <motion.button
                   onClick={() => setStep("form")}
-                  className="px-10 py-3 text-base font-semibold rounded-xl h-12"
-                  colorFrom="#000000"
-                  colorTo="#333333"
+                  className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-black dark:bg-white text-white dark:text-black text-sm font-semibold shadow-lg shadow-black/10 dark:shadow-white/5"
+                  whileHover={{ scale: 1.02, y: -1 }}
+                  whileTap={{ scale: 0.98 }}
                 >
-                  🎉 Get with 20,000 MMK
-                </GradientSlideButton>
+                  <CreditCard className="w-4 h-4" />
+                  Get with 20,000 MMK
+                </motion.button>
                 <p className="text-xs text-neutral-400">
                   One-time payment · Lifetime access
                 </p>
               </motion.div>
 
               {/* Reviews Marquee */}
-              <div className="w-screen max-w-[100vw] mt-6 -mx-4 overflow-hidden">
+              <div className="w-screen max-w-[100vw] mt-4 -mx-4 overflow-hidden">
                 <Marquee direction="left" duration={50} repeat={4}>
                   {reviews.map((review, i) => (
                     <ReviewCard key={i} {...review} />
@@ -304,9 +359,11 @@ export default function PendingPage() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
             >
+              <StepIndicator current={1} steps={["Info", "Payment", "Done"]} />
+
               <motion.button
                 onClick={() => setStep("intro")}
-                className="self-start flex items-center gap-1 text-sm text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
+                className="self-start flex items-center gap-1.5 text-sm text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 }}
@@ -317,7 +374,7 @@ export default function PendingPage() {
               {/* Avatar */}
               {userAvatar && (
                 <motion.div
-                  className="w-20 h-20 rounded-full overflow-hidden border-2 border-neutral-200 dark:border-neutral-800"
+                  className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-neutral-200 dark:border-neutral-800 shadow-lg"
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: "spring", stiffness: 200, damping: 15 }}
@@ -333,26 +390,14 @@ export default function PendingPage() {
               )}
 
               <div className="text-center">
-                <motion.h2
-                  className="text-xl font-bold"
-                  custom={0}
-                  variants={textVariants}
-                  initial="hidden"
-                  animate="visible"
-                >
+                <h2 className="text-xl font-bold">
                   {userName
                     ? `Hey, ${userName.split(" ")[0]}!`
                     : "Your Information"}
-                </motion.h2>
-                <motion.p
-                  className="text-sm text-neutral-500 mt-1"
-                  custom={1}
-                  variants={textVariants}
-                  initial="hidden"
-                  animate="visible"
-                >
+                </h2>
+                <p className="text-sm text-neutral-500 mt-1">
                   Confirm your details to proceed
-                </motion.p>
+                </p>
               </div>
 
               <motion.div
@@ -361,7 +406,6 @@ export default function PendingPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                {/* Name */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5" /> Name
@@ -375,7 +419,6 @@ export default function PendingPage() {
                   />
                 </div>
 
-                {/* Email */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5" /> Gmail
@@ -390,7 +433,6 @@ export default function PendingPage() {
                   />
                 </div>
 
-                {/* Phone */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5" /> Phone{" "}
@@ -411,7 +453,7 @@ export default function PendingPage() {
               <motion.button
                 onClick={handleSubmitForm}
                 disabled={!name.trim() || !email.trim()}
-                className="w-full py-3 rounded-xl text-sm font-medium bg-black text-white dark:bg-white dark:text-black hover:opacity-90 disabled:opacity-40 transition-opacity"
+                className="w-full py-3.5 rounded-xl text-sm font-semibold bg-black text-white dark:bg-white dark:text-black hover:opacity-90 disabled:opacity-40 transition-all"
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
                 initial={{ opacity: 0, y: 10 }}
@@ -433,9 +475,11 @@ export default function PendingPage() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
             >
+              <StepIndicator current={2} steps={["Info", "Payment", "Done"]} />
+
               <motion.button
                 onClick={() => setStep("form")}
-                className="self-start flex items-center gap-1 text-sm text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
+                className="self-start flex items-center gap-1.5 text-sm text-neutral-400 hover:text-black dark:hover:text-white transition-colors"
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
               >
@@ -443,24 +487,10 @@ export default function PendingPage() {
               </motion.button>
 
               <div className="text-center">
-                <motion.h2
-                  className="text-xl font-bold"
-                  custom={0}
-                  variants={textVariants}
-                  initial="hidden"
-                  animate="visible"
-                >
-                  Choose Payment Method
-                </motion.h2>
-                <motion.p
-                  className="text-sm text-neutral-500 mt-1"
-                  custom={1}
-                  variants={textVariants}
-                  initial="hidden"
-                  animate="visible"
-                >
+                <h2 className="text-xl font-bold">Choose Payment Method</h2>
+                <p className="text-sm text-neutral-500 mt-1">
                   20,000 MMK ဖြင့်ပိုင်ဆိုင်လိုက်ပါ
-                </motion.p>
+                </p>
               </div>
 
               {/* Payment buttons */}
@@ -470,33 +500,24 @@ export default function PendingPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15 }}
               >
-                <motion.button
-                  onClick={() => setSelectedMethod("kbz_pay")}
-                  className={`p-4 rounded-2xl border-2 transition-all text-center ${
-                    selectedMethod === "kbz_pay"
-                      ? "border-black dark:border-white bg-neutral-50 dark:bg-neutral-950"
-                      : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600"
-                  }`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <p className="text-sm font-semibold">KBZ Pay</p>
-                  <p className="text-xs text-neutral-400 mt-0.5">20,000 MMK</p>
-                </motion.button>
-
-                <motion.button
-                  onClick={() => setSelectedMethod("wave_pay")}
-                  className={`p-4 rounded-2xl border-2 transition-all text-center ${
-                    selectedMethod === "wave_pay"
-                      ? "border-black dark:border-white bg-neutral-50 dark:bg-neutral-950"
-                      : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600"
-                  }`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <p className="text-sm font-semibold">Wave Pay</p>
-                  <p className="text-xs text-neutral-400 mt-0.5">20,000 MMK</p>
-                </motion.button>
+                {(["kbz_pay", "wave_pay"] as const).map((method) => (
+                  <motion.button
+                    key={method}
+                    onClick={() => setSelectedMethod(method)}
+                    className={`p-5 rounded-2xl border-2 transition-all text-center ${
+                      selectedMethod === method
+                        ? "border-black dark:border-white bg-neutral-50 dark:bg-neutral-950 shadow-lg shadow-black/5 dark:shadow-white/5"
+                        : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600"
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <p className="text-sm font-bold">
+                      {method === "kbz_pay" ? "KBZ Pay" : "Wave Pay"}
+                    </p>
+                    <p className="text-xs text-neutral-400 mt-1">20,000 MMK</p>
+                  </motion.button>
+                ))}
               </motion.div>
 
               {/* QR Code Display */}
@@ -510,7 +531,7 @@ export default function PendingPage() {
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <div className="w-full max-w-[280px] aspect-square rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white p-2">
+                    <div className="w-full max-w-[260px] aspect-square rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-white p-2 shadow-lg shadow-black/5">
                       <Image
                         src={
                           selectedMethod === "kbz_pay"
@@ -528,7 +549,7 @@ export default function PendingPage() {
                       />
                     </div>
                     <motion.p
-                      className="text-xs text-neutral-400 text-center"
+                      className="text-xs text-neutral-400 text-center max-w-xs"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.2 }}
@@ -541,10 +562,10 @@ export default function PendingPage() {
                 )}
               </AnimatePresence>
 
-              {/* Swipe to send screenshot */}
+              {/* Swipe to send */}
               {selectedMethod && (
                 <motion.div
-                  className="flex flex-col items-center gap-2"
+                  className="flex flex-col items-center gap-2 w-full max-w-xs"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
@@ -552,7 +573,7 @@ export default function PendingPage() {
                   <SwipeButton
                     onSwipeComplete={handleSwipe}
                     text="Screenshot ပေးပို့ရန်"
-                    className="w-[280px] h-12"
+                    className="w-full h-12"
                   />
                   <p className="text-xs text-neutral-400">
                     Swipe to send payment screenshot via Telegram
@@ -562,7 +583,7 @@ export default function PendingPage() {
             </motion.div>
           )}
 
-          {/* Step 4: Waiting for admin approval */}
+          {/* Step 4: Waiting */}
           {step === "waiting" && (
             <motion.div
               key="waiting"
@@ -572,47 +593,69 @@ export default function PendingPage() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
             >
-              {/* User Avatar */}
-              {userAvatar ? (
+              {/* Pulsing Avatar */}
+              <motion.div
+                className="relative"
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 15 }}
+              >
+                {/* Ripple rings */}
                 <motion.div
-                  className="relative"
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                >
+                  className="absolute inset-0 rounded-full border-2 border-neutral-200 dark:border-neutral-800"
+                  animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 2,
+                    ease: "easeOut",
+                  }}
+                  style={{ width: "100%", height: "100%" }}
+                />
+                <motion.div
+                  className="absolute inset-0 rounded-full border-2 border-neutral-200 dark:border-neutral-800"
+                  animate={{ scale: [1, 1.3], opacity: [0.3, 0] }}
+                  transition={{
+                    repeat: Infinity,
+                    duration: 2,
+                    ease: "easeOut",
+                    delay: 0.5,
+                  }}
+                  style={{ width: "100%", height: "100%" }}
+                />
+
+                {userAvatar ? (
                   <Image
                     src={userAvatar}
                     alt={userName}
-                    width={80}
-                    height={80}
-                    className="w-20 h-20 rounded-full border-2 border-neutral-200 dark:border-neutral-800"
+                    width={88}
+                    height={88}
+                    className="w-22 h-22 rounded-full border-2 border-neutral-200 dark:border-neutral-800 relative z-10"
+                    style={{ width: 88, height: 88 }}
                   />
-                  <motion.div
-                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-neutral-100 dark:bg-neutral-900 border-2 border-white dark:border-black flex items-center justify-center"
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
+                ) : (
+                  <div
+                    className="w-22 h-22 rounded-full bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center relative z-10"
+                    style={{ width: 88, height: 88 }}
                   >
-                    <Clock className="w-3.5 h-3.5 text-neutral-500" />
-                  </motion.div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  className="w-20 h-20 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center"
-                  animate={{ scale: [1, 1.05, 1] }}
-                  transition={{ repeat: Infinity, duration: 2 }}
-                >
-                  <Clock className="w-8 h-8 text-neutral-500" />
-                </motion.div>
-              )}
+                    <Clock className="w-8 h-8 text-neutral-400" />
+                  </div>
+                )}
 
-              {/* User Name */}
+                <motion.div
+                  className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-950 border-2 border-white dark:border-black flex items-center justify-center z-20"
+                  animate={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ repeat: Infinity, duration: 3 }}
+                >
+                  <Clock className="w-4 h-4 text-amber-500" />
+                </motion.div>
+              </motion.div>
+
               {userName && (
                 <motion.p
                   className="text-sm text-neutral-400"
-                  custom={0}
-                  variants={textVariants}
-                  initial="hidden"
-                  animate="visible"
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
                 >
                   {userName}
                 </motion.p>
@@ -620,20 +663,18 @@ export default function PendingPage() {
 
               <div>
                 <motion.h2
-                  className="text-xl font-bold"
-                  custom={1}
-                  variants={textVariants}
-                  initial="hidden"
-                  animate="visible"
+                  className="text-2xl font-bold"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
                 >
                   Payment Under Review
                 </motion.h2>
                 <motion.p
-                  className="text-sm text-neutral-500 mt-2 max-w-sm"
-                  custom={2}
-                  variants={textVariants}
-                  initial="hidden"
-                  animate="visible"
+                  className="text-sm text-neutral-500 mt-3 max-w-sm leading-relaxed"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 }}
                 >
                   We&apos;ve received your payment submission! Our admin will
                   verify it shortly. You&apos;ll be redirected automatically
@@ -642,19 +683,19 @@ export default function PendingPage() {
               </div>
 
               <motion.div
-                className="p-4 rounded-xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-sm text-neutral-500"
-                custom={3}
-                variants={textVariants}
-                initial="hidden"
-                animate="visible"
+                className="flex items-center gap-3 p-4 rounded-2xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
               >
-                <p>
-                  💬 Questions? Contact us on{" "}
+                <MessageCircle className="w-5 h-5 text-neutral-400 shrink-0" />
+                <p className="text-sm text-neutral-500">
+                  Questions? Contact us on{" "}
                   <a
                     href="https://t.me/phyodynamic"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-black dark:text-white underline"
+                    className="text-black dark:text-white font-medium underline underline-offset-2"
                   >
                     Telegram
                   </a>
@@ -663,14 +704,14 @@ export default function PendingPage() {
 
               <motion.button
                 onClick={() => window.location.reload()}
-                className="px-6 py-2.5 rounded-xl text-sm font-medium border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-950 transition-colors"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-950 transition-colors"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                custom={4}
-                variants={textVariants}
-                initial="hidden"
-                animate="visible"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45 }}
               >
+                <RefreshCw className="w-3.5 h-3.5" />
                 Check Status
               </motion.button>
             </motion.div>

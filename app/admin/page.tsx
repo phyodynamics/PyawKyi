@@ -23,6 +23,8 @@ import {
   BookOpen,
   Bell,
   Send,
+  ArrowUpRight,
+  Activity,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -85,6 +87,44 @@ const tabs: { id: Tab; label: string; icon: typeof ClipboardList }[] = [
   { id: "notify", label: "Notify", icon: Bell },
 ];
 
+// Stat card component
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  subtitle,
+  delay = 0,
+}: {
+  icon: typeof Users;
+  label: string;
+  value: string | number;
+  subtitle: string;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      className="relative overflow-hidden p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.3 }}
+    >
+      <div className="absolute top-0 right-0 w-20 h-20 bg-neutral-100/50 dark:bg-neutral-800/20 rounded-full -translate-x-4 -translate-y-4 blur-2xl" />
+      <div className="relative">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center">
+            <Icon className="w-4 h-4 text-neutral-500" />
+          </div>
+          <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
+            {label}
+          </span>
+        </div>
+        <p className="text-3xl font-bold tracking-tight">{value}</p>
+        <p className="text-xs text-neutral-400 mt-1.5">{subtitle}</p>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>("analytics");
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -95,7 +135,6 @@ export default function AdminPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  // Notification form state
   const [notiTitle, setNotiTitle] = useState("");
   const [notiMessage, setNotiMessage] = useState("");
   const [notiType, setNotiType] = useState<
@@ -139,35 +178,32 @@ export default function AdminPage() {
     loadData();
   };
 
-  const updatePaymentStatus = async (userId: string, status: string) => {
-    await adminAction({ action: "update_payment_status", userId, status });
-  };
+  const updatePaymentStatus = (userId: string, status: string) =>
+    adminAction({ action: "update_payment_status", userId, status });
 
-  const approveSubmission = async (subId: string, userId: string) => {
-    await adminAction({
+  const approveSubmission = (subId: string, userId: string) =>
+    adminAction({
       action: "approve_submission",
       submissionId: subId,
       userId,
     });
-  };
 
-  const rejectSubmission = async (subId: string) => {
-    await adminAction({ action: "reject_submission", submissionId: subId });
-  };
+  const rejectSubmission = (subId: string) =>
+    adminAction({ action: "reject_submission", submissionId: subId });
 
-  const deleteNotification = async (notificationId: string) => {
+  const deleteNotification = (notificationId: string) => {
     if (!confirm("Are you sure you want to delete this notification?")) return;
-    await adminAction({ action: "delete_notification", notificationId });
+    adminAction({ action: "delete_notification", notificationId });
   };
 
-  const deleteUser = async (userId: string) => {
+  const deleteUser = (userId: string) => {
     if (!confirm("Are you sure you want to delete this user?")) return;
-    await adminAction({ action: "delete_user", userId });
+    adminAction({ action: "delete_user", userId });
   };
 
-  const revokeApiKey = async (userId: string) => {
+  const revokeApiKey = (userId: string) => {
     if (!confirm("Revoke this user's Gemini API key?")) return;
-    await adminAction({ action: "revoke_api_key", userId });
+    adminAction({ action: "revoke_api_key", userId });
   };
 
   const sendNotification = async () => {
@@ -207,13 +243,11 @@ export default function AdminPage() {
       (u.name && u.name.toLowerCase().includes(search.toLowerCase())),
   );
 
-  // ─── Analytics computed data ───
   const analytics = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    // Users
     const paidUsers = users.filter((u) => u.payment_status === "paid").length;
     const pendingUsers = users.filter(
       (u) => u.payment_status === "pending",
@@ -223,7 +257,6 @@ export default function AdminPage() {
       (u) => new Date(u.created_at) >= weekAgo,
     ).length;
 
-    // Saved items per mode
     const modeCount: Record<string, number> = {
       polish: 0,
       plan: 0,
@@ -236,7 +269,6 @@ export default function AdminPage() {
     });
     const totalProcessed = savedItems.length;
 
-    // Activity: items per day for last 7 days
     const dailyActivity: { label: string; count: number }[] = [];
     for (let i = 6; i >= 0; i--) {
       const day = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
@@ -250,7 +282,6 @@ export default function AdminPage() {
     }
     const maxDaily = Math.max(...dailyActivity.map((d) => d.count), 1);
 
-    // API keys
     const totalApiKeys = apiKeys.length;
     const activeApiKeys = apiKeys.filter((k) => k.is_active).length;
     const totalApiRequests = apiKeys.reduce(
@@ -258,16 +289,14 @@ export default function AdminPage() {
       0,
     );
 
-    // Top API key users
     const topApiUsers = [...apiKeys]
       .sort((a, b) => b.request_count - a.request_count)
       .slice(0, 5);
 
-    // Revenue
     const approvedPayments = submissions.filter(
       (s) => s.status === "approved",
     ).length;
-    const totalRevenue = approvedPayments * 20000; // 20,000 MMK each
+    const totalRevenue = approvedPayments * 20000;
 
     return {
       paidUsers,
@@ -288,20 +317,20 @@ export default function AdminPage() {
   }, [users, savedItems, apiKeys, submissions]);
 
   const statusBadge = (status: string) => {
-    const colors: Record<string, string> = {
+    const configs: Record<string, string> = {
       pending:
-        "bg-neutral-100 dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800",
-      paid: "bg-black text-white dark:bg-white dark:text-black border-transparent",
+        "bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/50",
+      paid: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50",
       suspended:
         "bg-neutral-100 dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800 line-through",
       approved:
-        "bg-black text-white dark:bg-white dark:text-black border-transparent",
+        "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50",
       rejected:
-        "bg-neutral-100 dark:bg-neutral-900 text-neutral-400 border-neutral-200 dark:border-neutral-800 line-through",
+        "bg-red-50 dark:bg-red-950/50 text-red-500 dark:text-red-400 border-red-200 dark:border-red-800/50 line-through",
     };
     return (
       <span
-        className={`px-2 py-0.5 rounded-full text-xs font-medium border ${colors[status] || "bg-neutral-100 dark:bg-neutral-900"}`}
+        className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${configs[status] || "bg-neutral-100 dark:bg-neutral-900"}`}
       >
         {status}
       </span>
@@ -310,17 +339,22 @@ export default function AdminPage() {
 
   if (!isAdmin && !loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
-        <p className="text-neutral-500">Access denied.</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-black gap-3">
+        <Shield className="w-10 h-10 text-neutral-300 dark:text-neutral-700" />
+        <p className="text-neutral-500 font-medium">Access denied.</p>
       </div>
     );
   }
 
+  const pendingSubmissions = submissions.filter(
+    (s) => s.status === "pending",
+  ).length;
+
   return (
-    <main className="min-h-screen bg-white dark:bg-black text-black dark:text-white">
+    <main className="min-h-screen bg-neutral-50 dark:bg-black text-black dark:text-white">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-5 py-4 md:px-8 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-neutral-100 dark:border-neutral-900">
-        <div className="flex items-center gap-2.5">
+      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-5 py-3.5 md:px-8 bg-white/80 dark:bg-black/80 backdrop-blur-xl border-b border-neutral-200 dark:border-neutral-900">
+        <div className="flex items-center gap-3">
           <Image
             src="/pyaw_kyi.png"
             alt="Logo"
@@ -328,15 +362,17 @@ export default function AdminPage() {
             height={32}
             className="w-8 h-8"
           />
-          <span className="text-base font-bold tracking-tight">Admin</span>
-          <span className="px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-900 text-neutral-500 text-xs font-medium border border-neutral-200 dark:border-neutral-800">
-            Dashboard
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-base font-bold tracking-tight">Admin</span>
+            <span className="px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-900 text-neutral-500 text-[10px] font-semibold uppercase tracking-wider border border-neutral-200 dark:border-neutral-800">
+              Dashboard
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <motion.button
             onClick={loadData}
-            className="p-2 rounded-full border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-950 transition-colors"
+            className="p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors bg-white dark:bg-neutral-950"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -344,7 +380,7 @@ export default function AdminPage() {
           </motion.button>
           <motion.button
             onClick={handleLogout}
-            className="p-2 rounded-full border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-950 transition-colors"
+            className="p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors bg-white dark:bg-neutral-950"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -353,138 +389,136 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <div className="pt-20 px-4 md:px-8 max-w-6xl mx-auto pb-16">
+      <div className="pt-[72px] px-4 md:px-8 max-w-6xl mx-auto pb-16">
         {/* Tabs */}
-        <div className="flex gap-1 p-1 rounded-xl bg-neutral-100 dark:bg-neutral-900 mb-6 overflow-x-auto">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                activeTab === tab.id
-                  ? "bg-white dark:bg-black text-black dark:text-white shadow-sm"
-                  : "text-neutral-500 hover:text-black dark:hover:text-white"
-              }`}
-            >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          ))}
+        <div className="sticky top-[72px] z-40 -mx-4 md:-mx-8 px-4 md:px-8 py-3 bg-neutral-50/80 dark:bg-black/80 backdrop-blur-xl">
+          <div className="flex gap-1 p-1 rounded-2xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-900 overflow-x-auto shadow-sm">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`relative flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
+                  activeTab === tab.id
+                    ? "bg-black dark:bg-white text-white dark:text-black shadow-sm"
+                    : "text-neutral-400 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+                {tab.id === "forms" && pendingSubmissions > 0 && (
+                  <span className="ml-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                    {pendingSubmissions}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Search (hidden on analytics and notify tabs) */}
+        {/* Search */}
         {activeTab !== "analytics" && activeTab !== "notify" && (
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+          <div className="relative mt-4 mb-4">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search users..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20"
+              className="w-full pl-11 pr-4 py-3 rounded-xl bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 shadow-sm"
             />
           </div>
         )}
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <RefreshCw className="w-6 h-6 animate-spin text-neutral-400" />
+          <div className="flex items-center justify-center py-24">
+            <div className="flex flex-col items-center gap-3">
+              <RefreshCw className="w-6 h-6 animate-spin text-neutral-400" />
+              <p className="text-xs text-neutral-400">Loading data...</p>
+            </div>
           </div>
         ) : (
           <>
-            {/* ═══════════════════════════════════ */}
-            {/* Tab: ANALYTICS                     */}
-            {/* ═══════════════════════════════════ */}
+            {/* ANALYTICS */}
             {activeTab === "analytics" && (
-              <div className="space-y-6">
-                {/* Top Stats */}
+              <div className="space-y-5 mt-4">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Users className="w-4 h-4 text-neutral-400" />
-                      <span className="text-xs text-neutral-500">
-                        Total Users
-                      </span>
-                    </div>
-                    <p className="text-3xl font-bold">{users.length}</p>
-                    <p className="text-xs text-neutral-400 mt-1">
-                      +{analytics.newUsersThisWeek} this week
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800">
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="w-4 h-4 text-neutral-400" />
-                      <span className="text-xs text-neutral-500">Revenue</span>
-                    </div>
-                    <p className="text-3xl font-bold">
-                      {(analytics.totalRevenue / 1000).toFixed(0)}K
-                    </p>
-                    <p className="text-xs text-neutral-400 mt-1">
-                      {analytics.approvedPayments} payments · MMK
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Zap className="w-4 h-4 text-neutral-400" />
-                      <span className="text-xs text-neutral-500">
-                        API Requests
-                      </span>
-                    </div>
-                    <p className="text-3xl font-bold">
-                      {analytics.totalApiRequests}
-                    </p>
-                    <p className="text-xs text-neutral-400 mt-1">
-                      {analytics.activeApiKeys} active keys
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800">
-                    <div className="flex items-center gap-2 mb-2">
-                      <BarChart3 className="w-4 h-4 text-neutral-400" />
-                      <span className="text-xs text-neutral-500">
-                        Items Processed
-                      </span>
-                    </div>
-                    <p className="text-3xl font-bold">
-                      {analytics.totalProcessed}
-                    </p>
-                    <p className="text-xs text-neutral-400 mt-1">
-                      across all modes
-                    </p>
-                  </div>
+                  <StatCard
+                    icon={Users}
+                    label="Users"
+                    value={users.length}
+                    subtitle={`+${analytics.newUsersThisWeek} this week`}
+                    delay={0}
+                  />
+                  <StatCard
+                    icon={TrendingUp}
+                    label="Revenue"
+                    value={`${(analytics.totalRevenue / 1000).toFixed(0)}K`}
+                    subtitle={`${analytics.approvedPayments} payments · MMK`}
+                    delay={0.05}
+                  />
+                  <StatCard
+                    icon={Zap}
+                    label="API Reqs"
+                    value={analytics.totalApiRequests}
+                    subtitle={`${analytics.activeApiKeys} active keys`}
+                    delay={0.1}
+                  />
+                  <StatCard
+                    icon={Activity}
+                    label="Processed"
+                    value={analytics.totalProcessed}
+                    subtitle="across all modes"
+                    delay={0.15}
+                  />
                 </div>
 
-                {/* 7-Day Activity Chart */}
-                <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800">
-                  <h3 className="text-sm font-medium mb-4">7-Day Activity</h3>
-                  <div className="flex items-end gap-2 h-32">
+                {/* 7-Day Chart */}
+                <motion.div
+                  className="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-sm font-semibold">7-Day Activity</h3>
+                    <span className="text-[10px] font-medium text-neutral-400 uppercase tracking-wider">
+                      Items Processed
+                    </span>
+                  </div>
+                  <div className="flex items-end gap-2 h-36">
                     {analytics.dailyActivity.map((day, i) => (
                       <div
                         key={i}
-                        className="flex-1 flex flex-col items-center gap-1"
+                        className="flex-1 flex flex-col items-center gap-1.5"
                       >
-                        <span className="text-[10px] text-neutral-400 font-medium">
+                        <span className="text-[10px] text-neutral-400 font-bold tabular-nums">
                           {day.count}
                         </span>
                         <motion.div
-                          className="w-full rounded-md bg-black dark:bg-white"
+                          className="w-full rounded-lg bg-black dark:bg-white"
                           initial={{ height: 0 }}
                           animate={{
                             height: `${Math.max((day.count / analytics.maxDaily) * 100, 4)}%`,
                           }}
-                          transition={{ delay: i * 0.05, duration: 0.4 }}
+                          transition={{ delay: 0.25 + i * 0.05, duration: 0.4 }}
                         />
-                        <span className="text-[10px] text-neutral-400">
+                        <span className="text-[10px] text-neutral-400 font-medium">
                           {day.label}
                         </span>
                       </div>
                     ))}
                   </div>
-                </div>
+                </motion.div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Mode Breakdown */}
-                  <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800">
-                    <h3 className="text-sm font-medium mb-4">Mode Usage</h3>
+                  <motion.div
+                    className="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <h3 className="text-sm font-semibold mb-4">Mode Usage</h3>
                     <div className="space-y-3">
                       {[
                         {
@@ -514,8 +548,12 @@ export default function AdminPage() {
                         },
                       ].map(({ mode, count, icon: Icon }) => (
                         <div key={mode} className="flex items-center gap-3">
-                          <Icon className="w-4 h-4 text-neutral-400 shrink-0" />
-                          <span className="text-sm w-12">{mode}</span>
+                          <div className="w-7 h-7 rounded-lg bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center">
+                            <Icon className="w-3.5 h-3.5 text-neutral-500" />
+                          </div>
+                          <span className="text-sm w-12 font-medium">
+                            {mode}
+                          </span>
                           <div className="flex-1 h-2 rounded-full bg-neutral-100 dark:bg-neutral-900 overflow-hidden">
                             <motion.div
                               className="h-full rounded-full bg-black dark:bg-white"
@@ -529,103 +567,101 @@ export default function AdminPage() {
                               transition={{ duration: 0.5 }}
                             />
                           </div>
-                          <span className="text-sm font-medium w-8 text-right">
+                          <span className="text-sm font-bold tabular-nums w-8 text-right">
                             {count}
                           </span>
                         </div>
                       ))}
                     </div>
-                  </div>
+                  </motion.div>
 
                   {/* User Breakdown */}
-                  <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800">
-                    <h3 className="text-sm font-medium mb-4">User Status</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-neutral-500">Paid</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-24 h-2 rounded-full bg-neutral-100 dark:bg-neutral-900 overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-black dark:bg-white"
-                              style={{
-                                width: users.length
-                                  ? `${(analytics.paidUsers / users.length) * 100}%`
-                                  : "0%",
-                              }}
-                            />
+                  <motion.div
+                    className="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.35 }}
+                  >
+                    <h3 className="text-sm font-semibold mb-4">User Status</h3>
+                    <div className="space-y-4">
+                      {[
+                        {
+                          label: "Paid",
+                          value: analytics.paidUsers,
+                          color: "bg-emerald-500",
+                        },
+                        {
+                          label: "Pending",
+                          value: analytics.pendingUsers,
+                          color: "bg-amber-500",
+                        },
+                        {
+                          label: "With Gemini Key",
+                          value: analytics.usersWithKey,
+                          color: "bg-black dark:bg-white",
+                        },
+                      ].map(({ label, value, color }) => (
+                        <div
+                          key={label}
+                          className="flex items-center justify-between"
+                        >
+                          <span className="text-sm text-neutral-500">
+                            {label}
+                          </span>
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-24 h-2 rounded-full bg-neutral-100 dark:bg-neutral-900 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${color}`}
+                                style={{
+                                  width: users.length
+                                    ? `${(value / users.length) * 100}%`
+                                    : "0%",
+                                }}
+                              />
+                            </div>
+                            <span className="text-sm font-bold tabular-nums w-8 text-right">
+                              {value}
+                            </span>
                           </div>
-                          <span className="text-sm font-medium w-8 text-right">
-                            {analytics.paidUsers}
+                        </div>
+                      ))}
+                      <div className="pt-2 border-t border-neutral-100 dark:border-neutral-900">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-neutral-500">
+                            PyawKyi API Keys
+                          </span>
+                          <span className="text-sm font-bold">
+                            {analytics.totalApiKeys}
                           </span>
                         </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-neutral-500">
-                          Pending
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-24 h-2 rounded-full bg-neutral-100 dark:bg-neutral-900 overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-neutral-400"
-                              style={{
-                                width: users.length
-                                  ? `${(analytics.pendingUsers / users.length) * 100}%`
-                                  : "0%",
-                              }}
-                            />
-                          </div>
-                          <span className="text-sm font-medium w-8 text-right">
-                            {analytics.pendingUsers}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-neutral-500">
-                          With Gemini Key
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-24 h-2 rounded-full bg-neutral-100 dark:bg-neutral-900 overflow-hidden">
-                            <div
-                              className="h-full rounded-full bg-black dark:bg-white"
-                              style={{
-                                width: users.length
-                                  ? `${(analytics.usersWithKey / users.length) * 100}%`
-                                  : "0%",
-                              }}
-                            />
-                          </div>
-                          <span className="text-sm font-medium w-8 text-right">
-                            {analytics.usersWithKey}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-neutral-500">
-                          PyawKyi API Keys
-                        </span>
-                        <span className="text-sm font-medium">
-                          {analytics.totalApiKeys}
-                        </span>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 </div>
 
                 {/* Top API Key Users */}
                 {analytics.topApiUsers.length > 0 && (
-                  <div className="p-5 rounded-xl border border-neutral-200 dark:border-neutral-800">
-                    <h3 className="text-sm font-medium mb-4">
+                  <motion.div
+                    className="p-5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    <h3 className="text-sm font-semibold mb-4">
                       Top API Key Users
                     </h3>
-                    <div className="space-y-2">
-                      {analytics.topApiUsers.map((k) => {
+                    <div className="space-y-2.5">
+                      {analytics.topApiUsers.map((k, i) => {
                         const user = users.find((u) => u.id === k.user_id);
                         return (
                           <div
                             key={k.id}
-                            className="flex items-center justify-between py-2"
+                            className="flex items-center justify-between py-2 px-3 rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors"
                           >
                             <div className="flex items-center gap-3 min-w-0">
+                              <span className="text-xs font-bold text-neutral-300 dark:text-neutral-700 w-4">
+                                {i + 1}
+                              </span>
                               {user?.avatar_url ? (
                                 <Image
                                   src={user.avatar_url}
@@ -651,7 +687,7 @@ export default function AdminPage() {
                               </div>
                             </div>
                             <div className="text-right shrink-0">
-                              <p className="text-sm font-bold">
+                              <p className="text-sm font-bold tabular-nums">
                                 {k.request_count}
                               </p>
                               <p className="text-[10px] text-neutral-400">
@@ -662,29 +698,32 @@ export default function AdminPage() {
                         );
                       })}
                     </div>
-                  </div>
+                  </motion.div>
                 )}
               </div>
             )}
 
-            {/* ═══════════════════════════════════ */}
-            {/* Tab: PAYMENT FORMS                 */}
-            {/* ═══════════════════════════════════ */}
+            {/* PAYMENT FORMS */}
             {activeTab === "forms" && (
-              <div className="space-y-3">
+              <div className="space-y-3 mt-1">
                 {submissions.length === 0 ? (
-                  <p className="text-center text-neutral-500 py-10">
-                    No payment submissions yet
-                  </p>
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <ClipboardList className="w-10 h-10 text-neutral-200 dark:text-neutral-800 mb-3" />
+                    <p className="text-neutral-500 font-medium">
+                      No payment submissions yet
+                    </p>
+                  </div>
                 ) : (
                   submissions.map((sub) => (
-                    <div
+                    <motion.div
                       key={sub.id}
-                      className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800"
+                      className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950"
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
                     >
                       <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-1 min-w-0">
-                          <p className="font-medium text-sm truncate">
+                        <div className="space-y-1.5 min-w-0">
+                          <p className="font-semibold text-sm truncate">
                             {sub.name}
                           </p>
                           <p className="text-xs text-neutral-400">
@@ -695,8 +734,8 @@ export default function AdminPage() {
                               {sub.phone}
                             </p>
                           )}
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <span className="text-xs px-2.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 font-medium">
                               {sub.payment_method === "kbz_pay"
                                 ? "KBZ Pay"
                                 : "Wave Pay"}
@@ -713,7 +752,7 @@ export default function AdminPage() {
                               onClick={() =>
                                 approveSubmission(sub.id, sub.user_id)
                               }
-                              className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-950 transition-colors"
+                              className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/50 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
                               whileTap={{ scale: 0.95 }}
                               title="Approve"
                             >
@@ -721,7 +760,7 @@ export default function AdminPage() {
                             </motion.button>
                             <motion.button
                               onClick={() => rejectSubmission(sub.id)}
-                              className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-950 transition-colors"
+                              className="p-2.5 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800/50 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
                               whileTap={{ scale: 0.95 }}
                               title="Reject"
                             >
@@ -730,21 +769,19 @@ export default function AdminPage() {
                           </div>
                         )}
                       </div>
-                    </div>
+                    </motion.div>
                   ))
                 )}
               </div>
             )}
 
-            {/* ═══════════════════════════════════ */}
-            {/* Tab: USER STATUS                   */}
-            {/* ═══════════════════════════════════ */}
+            {/* USER STATUS */}
             {activeTab === "status" && (
-              <div className="space-y-3">
+              <div className="space-y-3 mt-1">
                 {filteredUsers.map((user) => (
                   <div
                     key={user.id}
-                    className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800"
+                    className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950"
                   >
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 min-w-0">
@@ -754,10 +791,10 @@ export default function AdminPage() {
                             alt=""
                             width={36}
                             height={36}
-                            className="w-9 h-9 rounded-full"
+                            className="w-9 h-9 rounded-xl"
                           />
                         ) : (
-                          <div className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center text-xs font-bold">
+                          <div className="w-9 h-9 rounded-xl bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center text-xs font-bold">
                             {(user.name || user.email)[0]?.toUpperCase()}
                           </div>
                         )}
@@ -777,7 +814,7 @@ export default function AdminPage() {
                           onChange={(e) =>
                             updatePaymentStatus(user.id, e.target.value)
                           }
-                          className="text-xs px-2 py-1 rounded-lg bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 focus:outline-none"
+                          className="text-xs px-2.5 py-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 focus:outline-none cursor-pointer"
                         >
                           <option value="pending">Pending</option>
                           <option value="paid">Paid</option>
@@ -790,17 +827,15 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* ═══════════════════════════════════ */}
-            {/* Tab: API KEYS                      */}
-            {/* ═══════════════════════════════════ */}
+            {/* API KEYS */}
             {activeTab === "keys" && (
-              <div className="space-y-3">
+              <div className="space-y-3 mt-1">
                 {filteredUsers.map((user) => {
                   const userKeys = apiKeys.filter((k) => k.user_id === user.id);
                   return (
                     <div
                       key={user.id}
-                      className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800"
+                      className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950"
                     >
                       <div className="flex items-center gap-3 mb-3">
                         {user.avatar_url ? (
@@ -809,10 +844,10 @@ export default function AdminPage() {
                             alt=""
                             width={36}
                             height={36}
-                            className="w-9 h-9 rounded-full"
+                            className="w-9 h-9 rounded-xl"
                           />
                         ) : (
-                          <div className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center text-xs font-bold">
+                          <div className="w-9 h-9 rounded-xl bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center text-xs font-bold">
                             {(user.name || user.email)[0]?.toUpperCase()}
                           </div>
                         )}
@@ -827,12 +862,12 @@ export default function AdminPage() {
                         <div className="flex items-center gap-2 shrink-0">
                           {user.gemini_api_key ? (
                             <>
-                              <code className="text-xs px-2 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 font-mono">
+                              <code className="text-xs px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 font-mono">
                                 {user.gemini_api_key.slice(0, 10)}...
                               </code>
                               <motion.button
                                 onClick={() => revokeApiKey(user.id)}
-                                className="p-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-950 transition-colors"
+                                className="p-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:bg-red-50 dark:hover:bg-red-950/50 hover:border-red-200 dark:hover:border-red-800/50 transition-colors"
                                 whileTap={{ scale: 0.95 }}
                                 title="Revoke Gemini key"
                               >
@@ -847,13 +882,12 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      {/* PyawKyi API keys for this user */}
                       {userKeys.length > 0 && (
                         <div className="ml-12 space-y-1.5">
                           {userKeys.map((k) => (
                             <div
                               key={k.id}
-                              className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-neutral-50 dark:bg-neutral-950"
+                              className="flex items-center justify-between py-1.5 px-3 rounded-xl bg-neutral-50 dark:bg-neutral-900/50"
                             >
                               <div className="flex items-center gap-2 min-w-0">
                                 <Zap className="w-3 h-3 text-neutral-400 shrink-0" />
@@ -864,7 +898,7 @@ export default function AdminPage() {
                                   {k.name}
                                 </span>
                               </div>
-                              <span className="text-[10px] font-medium text-neutral-500 shrink-0">
+                              <span className="text-[10px] font-bold text-neutral-500 shrink-0 tabular-nums">
                                 {k.request_count} req
                               </span>
                             </div>
@@ -877,15 +911,13 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* ═══════════════════════════════════ */}
-            {/* Tab: USER MANAGEMENT               */}
-            {/* ═══════════════════════════════════ */}
+            {/* USER MANAGEMENT */}
             {activeTab === "management" && (
-              <div className="space-y-3">
+              <div className="space-y-3 mt-1">
                 {filteredUsers.map((user) => (
                   <div
                     key={user.id}
-                    className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800"
+                    className="p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950"
                   >
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 min-w-0">
@@ -895,10 +927,10 @@ export default function AdminPage() {
                             alt=""
                             width={36}
                             height={36}
-                            className="w-9 h-9 rounded-full"
+                            className="w-9 h-9 rounded-xl"
                           />
                         ) : (
-                          <div className="w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center text-xs font-bold">
+                          <div className="w-9 h-9 rounded-xl bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center text-xs font-bold">
                             {(user.name || user.email)[0]?.toUpperCase()}
                           </div>
                         )}
@@ -923,37 +955,33 @@ export default function AdminPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <motion.button
-                          onClick={() => deleteUser(user.id)}
-                          className="p-2 rounded-lg border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-950 transition-colors"
-                          whileTap={{ scale: 0.95 }}
-                          title="Delete user"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </motion.button>
-                      </div>
+                      <motion.button
+                        onClick={() => deleteUser(user.id)}
+                        className="p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-red-50 dark:hover:bg-red-950/50 hover:border-red-200 dark:hover:border-red-800/50 text-neutral-400 hover:text-red-500 transition-all"
+                        whileTap={{ scale: 0.95 }}
+                        title="Delete user"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </motion.button>
                     </div>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* ═══════════════════════════════════ */}
-            {/* Tab: NOTIFICATIONS                 */}
-            {/* ═══════════════════════════════════ */}
+            {/* NOTIFICATIONS */}
             {activeTab === "notify" && (
-              <div className="max-w-lg mx-auto space-y-6">
+              <div className="max-w-lg mx-auto space-y-6 mt-4">
                 <div className="text-center">
                   <h2 className="text-xl font-bold mb-1">Send Notification</h2>
                   <p className="text-sm text-neutral-500">
-                    Broadcast a message to all connected users in real-time
+                    Broadcast a message to all connected users
                   </p>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-4 p-6 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950">
                   {/* Type selector */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <label className="text-sm font-medium">Type</label>
                     <div className="flex gap-2">
                       {(["info", "update", "promo", "alert"] as const).map(
@@ -968,10 +996,10 @@ export default function AdminPage() {
                             <button
                               key={t}
                               onClick={() => setNotiType(t)}
-                              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
+                              className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-sm font-medium border transition-all ${
                                 notiType === t
-                                  ? "bg-black text-white dark:bg-white dark:text-black border-transparent"
-                                  : "border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-950"
+                                  ? "bg-black text-white dark:bg-white dark:text-black border-transparent shadow-sm"
+                                  : "border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900"
                               }`}
                             >
                               <span>{icons[t]}</span>
@@ -984,44 +1012,46 @@ export default function AdminPage() {
                   </div>
 
                   {/* Title */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <label className="text-sm font-medium">Title</label>
                     <input
                       type="text"
                       value={notiTitle}
                       onChange={(e) => setNotiTitle(e.target.value)}
                       placeholder="Notification title..."
-                      className="w-full px-4 py-3 rounded-xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20"
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10"
                     />
                   </div>
 
                   {/* Message */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <label className="text-sm font-medium">Message</label>
                     <textarea
                       value={notiMessage}
                       onChange={(e) => setNotiMessage(e.target.value)}
                       placeholder="Write your notification message..."
                       rows={3}
-                      className="w-full px-4 py-3 rounded-xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 resize-none"
+                      className="w-full px-4 py-3 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 resize-none"
                     />
                   </div>
 
                   {/* Preview */}
                   {(notiTitle || notiMessage) && (
-                    <div className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950">
-                      <p className="text-[10px] uppercase tracking-wider text-neutral-400 mb-2 font-medium">
+                    <div className="p-4 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/50">
+                      <p className="text-[10px] uppercase tracking-wider text-neutral-400 mb-2 font-semibold">
                         Preview
                       </p>
                       <div className="flex items-start gap-3">
                         <span className="text-base mt-0.5">
                           {
-                            {
-                              info: "ℹ️",
-                              update: "🚀",
-                              promo: "🎉",
-                              alert: "⚠️",
-                            }[notiType]
+                            (
+                              {
+                                info: "ℹ️",
+                                update: "🚀",
+                                promo: "🎉",
+                                alert: "⚠️",
+                              } as const
+                            )[notiType]
                           }
                         </span>
                         <div>
@@ -1042,7 +1072,7 @@ export default function AdminPage() {
                     disabled={
                       notiSending || !notiTitle.trim() || !notiMessage.trim()
                     }
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-black text-white dark:bg-white dark:text-black text-sm font-semibold disabled:opacity-40 transition-opacity"
+                    className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-black text-white dark:bg-white dark:text-black text-sm font-semibold disabled:opacity-40 transition-opacity"
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
                   >
@@ -1062,37 +1092,41 @@ export default function AdminPage() {
                   </motion.button>
                 </div>
 
-                {/* Recent Notifications History */}
-                <div className="mt-12 space-y-4">
+                {/* Recent Notifications */}
+                <div className="space-y-4 mt-8">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold">Recent Notifications</h3>
-                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-neutral-100 dark:bg-neutral-900">
+                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
                       {notifications.length} Total
                     </span>
                   </div>
 
                   {notifications.length === 0 ? (
-                    <div className="text-center py-8 text-sm text-neutral-500 bg-neutral-50 dark:bg-neutral-900/50 rounded-xl border border-neutral-100 dark:border-neutral-800">
-                      No notifications sent yet.
+                    <div className="flex flex-col items-center justify-center py-10 text-center bg-white dark:bg-neutral-950 rounded-2xl border border-neutral-200 dark:border-neutral-800">
+                      <Bell className="w-8 h-8 text-neutral-200 dark:text-neutral-800 mb-2" />
+                      <p className="text-sm text-neutral-500">
+                        No notifications sent yet.
+                      </p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                       {notifications.map((notif) => {
-                        const style = {
-                          info: { bg: "bg-blue-500", icon: "ℹ️" },
-                          update: { bg: "bg-green-500", icon: "🚀" },
-                          promo: { bg: "bg-purple-500", icon: "🎉" },
-                          alert: { bg: "bg-red-500", icon: "⚠️" },
-                        }[notif.type] || { bg: "bg-blue-500", icon: "ℹ️" };
+                        const icon =
+                          {
+                            info: "ℹ️",
+                            update: "🚀",
+                            promo: "🎉",
+                            alert: "⚠️",
+                          }[notif.type] || "ℹ️";
 
                         return (
                           <div
                             key={notif.id}
-                            className="flex items-start justify-between gap-4 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950"
+                            className="flex items-start justify-between gap-4 p-4 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950"
                           >
                             <div className="flex items-start gap-3 min-w-0">
                               <span className="text-xl shrink-0 mt-0.5">
-                                {style.icon}
+                                {icon}
                               </span>
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold truncate">
@@ -1108,7 +1142,7 @@ export default function AdminPage() {
                             </div>
                             <button
                               onClick={() => deleteNotification(notif.id)}
-                              className="p-2 shrink-0 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"
+                              className="p-2 shrink-0 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 transition-all"
                               title="Delete notification"
                             >
                               <Trash2 className="w-4 h-4" />
