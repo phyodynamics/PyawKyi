@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Code,
   Eye,
@@ -21,13 +21,14 @@ export function CodePreview({ code }: CodePreviewProps) {
   const [activeTab, setActiveTab] = useState<"code" | "preview">("preview");
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [key, setKey] = useState(0);
+  const [iframeKey, setIframeKey] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Refs for the single iframe and its containers
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const inlineContainerRef = useRef<HTMLDivElement>(null);
-  const fullscreenContainerRef = useRef<HTMLDivElement>(null);
+  // Ensure portal target exists (client-side only)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Build a complete HTML document from the code
   const fullHtml = useMemo(() => {
@@ -81,21 +82,11 @@ export function CodePreview({ code }: CodePreviewProps) {
     return () => URL.revokeObjectURL(blobUrl);
   }, [blobUrl]);
 
-  // Move the single iframe between inline and fullscreen containers
+  // Reset loading state when code changes
   useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-
-    if (isFullscreen && fullscreenContainerRef.current) {
-      // Move iframe to fullscreen container
-      iframe.className = "w-full h-full bg-white";
-      fullscreenContainerRef.current.appendChild(iframe);
-    } else if (!isFullscreen && inlineContainerRef.current) {
-      // Move iframe back to inline container
-      iframe.className = "w-full bg-white h-[350px] sm:h-[400px] md:h-[500px]";
-      inlineContainerRef.current.appendChild(iframe);
-    }
-  }, [isFullscreen]);
+    setIsLoading(true);
+    setHasError(false);
+  }, [code]);
 
   // Lock body scroll when fullscreen
   useEffect(() => {
@@ -122,17 +113,16 @@ export function CodePreview({ code }: CodePreviewProps) {
     e?.stopPropagation();
     setIsLoading(true);
     setHasError(false);
+    setIframeKey((k) => k + 1);
+  }, []);
 
-    // Changing the key forces a complete re-mount of the iframe,
-    // but if it's currently rendered inside the portal,
-    // the unmounting can cause React invariant errors and crash.
-    // Instead of remounting the entire iframe, let's just reload its content smoothly
-    const iframe = iframeRef.current;
-    if (iframe) {
-      iframe.src = iframe.src; // Triggers a reload without unmounting the element
-    } else {
-      setKey((k) => k + 1); // Fallback
-    }
+  const handleIframeLoad = useCallback(() => {
+    setIsLoading(false);
+  }, []);
+
+  const handleIframeError = useCallback(() => {
+    setIsLoading(false);
+    setHasError(true);
   }, []);
 
   // Render the loading/error overlay
@@ -160,26 +150,21 @@ export function CodePreview({ code }: CodePreviewProps) {
     </>
   );
 
+  // Shared iframe element (rendered in the right place based on state)
+  const renderIframe = (heightClass: string) => (
+    <iframe
+      key={`iframe-${iframeKey}`}
+      src={blobUrl}
+      className={`w-full bg-white ${heightClass}`}
+      onLoad={handleIframeLoad}
+      onError={handleIframeError}
+      sandbox="allow-scripts allow-same-origin allow-modals allow-forms allow-popups"
+      title="Code Preview"
+    />
+  );
+
   return (
     <>
-      {/* Hidden single iframe that persists across fullscreen toggle */}
-      <iframe
-        ref={iframeRef}
-        key={`${key}-${blobUrl}`}
-        src={blobUrl}
-        className="w-full bg-white h-[350px] sm:h-[400px] md:h-[500px]"
-        onLoad={() => {
-          setIsLoading(false);
-        }}
-        onError={() => {
-          setIsLoading(false);
-          setHasError(true);
-        }}
-        sandbox="allow-scripts allow-same-origin allow-modals allow-forms allow-popups"
-        title="Code Preview"
-        style={{ display: activeTab === "preview" ? undefined : "none" }}
-      />
-
       <div className="space-y-4">
         {/* Tab bar */}
         <div className="flex items-center justify-between gap-2">
@@ -230,12 +215,10 @@ export function CodePreview({ code }: CodePreviewProps) {
 
         {/* Active panel */}
         {activeTab === "preview" ? (
-          <div
-            className={`relative bg-white overflow-hidden rounded-xl border border-border ${isFullscreen ? "invisible h-0" : ""}`}
-          >
+          <div className="relative bg-white overflow-hidden rounded-xl border border-border">
             {renderOverlay()}
-            {/* Inline container — the iframe is moved here when not fullscreen */}
-            <div ref={inlineContainerRef} />
+            {!isFullscreen &&
+              renderIframe("h-[350px] sm:h-[400px] md:h-[500px]")}
           </div>
         ) : (
           <motion.div
@@ -252,6 +235,7 @@ export function CodePreview({ code }: CodePreviewProps) {
 
       {/* Fullscreen overlay — uses a portal to render at document body level */}
       {isFullscreen &&
+        mounted &&
         createPortal(
           <div className="fixed inset-0 z-[9999] bg-white flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 bg-white shrink-0">
@@ -280,8 +264,7 @@ export function CodePreview({ code }: CodePreviewProps) {
             </div>
             <div className="flex-1 overflow-hidden relative">
               {renderOverlay()}
-              {/* Fullscreen container — the iframe is moved here when fullscreen */}
-              <div ref={fullscreenContainerRef} className="h-full" />
+              {renderIframe("h-full")}
             </div>
           </div>,
           document.body,
