@@ -257,7 +257,13 @@ export async function processBuild(audioBlob: Blob): Promise<BuildResult> {
       isAudio: true,
     });
 
-    const generatedCode = initialResult.html_code;
+    const resultAny = initialResult as unknown as Record<string, string>;
+    const generatedCode =
+      initialResult.html_code ||
+      resultAny.fixed_code ||
+      (resultAny.raw && resultAny.raw.includes("<!DOCTYPE")
+        ? resultAny.raw
+        : null);
 
     if (!generatedCode) {
       throw new APIError(

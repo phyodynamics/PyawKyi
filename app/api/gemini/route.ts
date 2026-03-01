@@ -379,6 +379,44 @@ export async function POST(request: NextRequest) {
       const parsed = JSON.parse(cleanResult);
       return NextResponse.json({ result: parsed });
     } catch {
+      // For HTML code responses, try to extract html_code directly
+      const htmlCodeMatch = cleanResult.match(
+        /"html_code"\s*:\s*"((?:[^"\\]|\\.)*)"/,
+      );
+      if (htmlCodeMatch) {
+        try {
+          const htmlCode = JSON.parse('"' + htmlCodeMatch[1] + '"');
+          return NextResponse.json({ result: { html_code: htmlCode } });
+        } catch {
+          // Try unescaping manually
+          const rawHtml = htmlCodeMatch[1]
+            .replace(/\\n/g, "\n")
+            .replace(/\\t/g, "\t")
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, "\\");
+          return NextResponse.json({ result: { html_code: rawHtml } });
+        }
+      }
+
+      // For fixed_code responses (build fix pass)
+      const fixedCodeMatch = cleanResult.match(
+        /"fixed_code"\s*:\s*"((?:[^"\\]|\\.)*)"/,
+      );
+      if (fixedCodeMatch) {
+        try {
+          const fixedCode = JSON.parse('"' + fixedCodeMatch[1] + '"');
+          return NextResponse.json({ result: { fixed_code: fixedCode } });
+        } catch {
+          const rawFixed = fixedCodeMatch[1]
+            .replace(/\\n/g, "\n")
+            .replace(/\\t/g, "\t")
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, "\\");
+          return NextResponse.json({ result: { fixed_code: rawFixed } });
+        }
+      }
+
+      // Generic JSON object extraction fallback
       const jsonMatch = cleanResult.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         try {
