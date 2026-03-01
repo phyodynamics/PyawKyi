@@ -183,10 +183,10 @@ Return strictly a JSON object.
 }`;
 
 export const REFINE_CODE_PROMPT = `Role: Code Editor.
-Task: Modify the existing HTML string based on the refinement_instruction.
+Task: Modify the existing HTML code based on the refinement_instruction. The current code is provided between ---CURRENT_CODE_START--- and ---CURRENT_CODE_END--- delimiters.
 
 Rules:
-1. Update styling or text as requested.
+1. Update styling or text as requested by the refinement_instruction.
 2. Maintain the STRICT Monochrome (Black, White, Gray only) design unless explicitly instructed otherwise.
 3. Preserve existing logic and CDN links (TailwindCSS, FontAwesome).
 4. Maintain the app's current language for UI text.

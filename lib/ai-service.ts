@@ -416,8 +416,9 @@ export async function refineCode(
   try {
     const result = await callAPI<{ fixed_code: string }>({
       systemPrompt: REFINE_CODE_PROMPT,
-      userContent: `current_code: "${currentCode.replace(/"/g, '\\"')}"\n\nrefinement_instruction: "${instruction}"`,
+      userContent: `refinement_instruction: ${instruction}\n\n---CURRENT_CODE_START---\n${currentCode}\n---CURRENT_CODE_END---`,
       isAudio: false,
+      isCodeRefine: true,
     });
 
     return result.fixed_code || currentCode;

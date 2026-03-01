@@ -51,6 +51,7 @@ async function callGeminiAPI(
   userContent: string,
   model: string,
   apiKey: string,
+  isCodeRefine: boolean = false,
 ): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -73,7 +74,7 @@ async function callGeminiAPI(
         temperature: 0.7,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 8192,
+        maxOutputTokens: isCodeRefine ? 65536 : 8192,
         responseMimeType: "application/json",
       },
     }),
@@ -342,6 +343,7 @@ export async function POST(request: NextRequest) {
       isAudio,
       imageBase64,
       imageMimeType,
+      isCodeRefine,
     } = body;
 
     // Validate required fields
@@ -361,10 +363,11 @@ export async function POST(request: NextRequest) {
       return errorResponse("Missing content.", 400);
     }
 
+    const maxContentLength = isCodeRefine ? 200000 : 50000;
     if (
       userContent &&
       typeof userContent === "string" &&
-      userContent.length > 50000
+      userContent.length > maxContentLength
     ) {
       return errorResponse("Content too long.", 400);
     }
@@ -396,6 +399,7 @@ export async function POST(request: NextRequest) {
             userContent,
             model,
             userApiKey,
+            !!isCodeRefine,
           );
         }
         if (result && result.trim().length > 0) {
