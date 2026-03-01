@@ -323,12 +323,30 @@ export default function Home() {
     if (!result) return;
 
     let content = "";
-    if ("refined_text" in result) content = result.refined_text;
-    else if ("plan_title" in result) content = JSON.stringify(result, null, 2);
-    else if ("generated_content" in result) content = result.generated_content;
-    else if ("fixed_code" in result)
-      content = result.fixed_code || result.html_code;
-    else if ("study_title" in result) content = JSON.stringify(result, null, 2);
+    switch (currentMode) {
+      case "polish":
+        if ("refined_text" in result) content = result.refined_text;
+        break;
+      case "plan":
+        content = JSON.stringify(result, null, 2);
+        break;
+      case "craft":
+        if ("generated_content" in result) content = result.generated_content;
+        break;
+      case "build":
+        if ("fixed_code" in result)
+          content = result.fixed_code || result.html_code;
+        else if ("html_code" in result) content = result.html_code;
+        break;
+      case "learn":
+        content = JSON.stringify(result, null, 2);
+        break;
+    }
+
+    if (!content) {
+      showError("Nothing to save.", "error");
+      return;
+    }
 
     const supabase = createClient();
     const {
@@ -347,9 +365,11 @@ export default function Home() {
         .select()
         .single();
 
-      if (!error && data) {
+      if (error) {
+        showError("Failed to save. Please try again.", "error");
+      } else if (data) {
         setHistoryItems((prev) => [data, ...prev]);
-        showError("Saved to history!", "error"); // Using error toast as notification
+        showError("Saved to history!", "error");
       }
     }
   }, [result, currentMode, showError]);
