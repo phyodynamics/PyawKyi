@@ -17,6 +17,7 @@ import {
   EyeOff,
   ExternalLink,
   BookOpen,
+  CreditCard,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -25,6 +26,7 @@ interface UserProfile {
   name: string;
   avatar_url: string;
   gemini_api_key: string | null;
+  price_paid: number | null;
 }
 
 interface UsageStats {
@@ -77,7 +79,7 @@ export function UserSettings({
     if (user) {
       const { data } = await supabase
         .from("users")
-        .select("email, name, avatar_url, gemini_api_key")
+        .select("email, name, avatar_url, gemini_api_key, price_paid")
         .eq("id", user.id)
         .single();
       if (data) {
@@ -204,6 +206,15 @@ export function UserSettings({
                   <p className="text-xs text-neutral-500 truncate">
                     {profile?.email || "—"}
                   </p>
+                  {profile?.price_paid != null && (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <CreditCard className="w-3 h-3 text-emerald-500" />
+                      <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                        {profile.price_paid.toLocaleString()} MMK
+                      </span>
+                      <span className="text-[10px] text-neutral-400">paid</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
