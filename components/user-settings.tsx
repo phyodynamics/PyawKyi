@@ -206,7 +206,7 @@ export function UserSettings({
                   <p className="text-xs text-neutral-500 truncate">
                     {profile?.email || "—"}
                   </p>
-                  {profile?.price_paid != null && (
+                  {profile?.price_paid != null ? (
                     <div className="flex items-center gap-1.5 mt-1.5">
                       <CreditCard className="w-3 h-3 text-emerald-500" />
                       <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
@@ -214,7 +214,14 @@ export function UserSettings({
                       </span>
                       <span className="text-[10px] text-neutral-400">paid</span>
                     </div>
-                  )}
+                  ) : isAdmin ? (
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <Shield className="w-3 h-3 text-violet-500" />
+                      <span className="text-xs font-medium text-violet-600 dark:text-violet-400">
+                        Admin · Free Access
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>
