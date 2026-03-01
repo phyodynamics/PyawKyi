@@ -50,7 +50,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
               "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com",
               "img-src 'self' data: blob: https://lh3.googleusercontent.com https://*.supabase.co",
-              "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://accounts.google.com https://pyawkyi.phyozinko.com",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com https://accounts.google.com https://pyawkyi.phyozinko.com",
               "frame-src 'self' blob: https://*.supabase.co https://accounts.google.com",
               "frame-ancestors 'self'",
               "media-src 'self' blob:",
