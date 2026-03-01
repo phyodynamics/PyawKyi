@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import webPush from "web-push";
+
+// Configure VAPID for push notifications
+if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webPush.setVapidDetails(
+    "mailto:bababoi134459@gmail.com",
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY,
+  );
+}
 
 // ═══════════════════════════════════════════════════
 // Admin-only API route — uses service role key
@@ -205,13 +215,60 @@ export async function POST(request: NextRequest) {
 
     case "toggle_maintenance": {
       const { enabled } = body;
+      const isEnabling = enabled === true || enabled === "true";
       await service
         .from("app_settings")
         .update({
-          maintenance_mode: enabled === true || enabled === "true",
+          maintenance_mode: isEnabling,
           updated_at: new Date().toISOString(),
         })
         .eq("id", "global");
+
+      // Auto-send push notification when maintenance is turned ON
+      if (isEnabling) {
+        try {
+          const { data: subscriptions } = await service
+            .from("push_subscriptions")
+            .select("*");
+
+          if (subscriptions && subscriptions.length > 0) {
+            const payload = JSON.stringify({
+              title: "🔧 Maintenance Mode",
+              body: "Pyaw Kyi is under maintenance. We'll be back shortly!",
+              message: "Pyaw Kyi is under maintenance. We'll be back shortly!",
+              type: "alert",
+              id: `maint-${Date.now()}`,
+            });
+
+            await Promise.allSettled(
+              subscriptions.map(async (sub: any) => {
+                try {
+                  await webPush.sendNotification(
+                    {
+                      endpoint: sub.endpoint,
+                      keys: {
+                        p256dh: sub.keys_p256dh,
+                        auth: sub.keys_auth,
+                      },
+                    },
+                    payload,
+                  );
+                } catch (err: unknown) {
+                  const error = err as { statusCode?: number };
+                  if (error.statusCode === 410 || error.statusCode === 404) {
+                    await service
+                      .from("push_subscriptions")
+                      .delete()
+                      .eq("endpoint", sub.endpoint);
+                  }
+                }
+              }),
+            );
+          }
+        } catch {
+          // Push failure shouldn't block the toggle
+        }
+      }
       break;
     }
 
