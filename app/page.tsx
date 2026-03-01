@@ -372,7 +372,7 @@ export default function Home() {
         showError("Failed to save. Please try again.", "error");
       } else if (data) {
         setHistoryItems((prev) => [data, ...prev]);
-        showError("Saved to history!", "error");
+        showError("Saved to history!", "success");
       }
     }
   }, [result, currentMode, showError]);

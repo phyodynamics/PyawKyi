@@ -10,12 +10,13 @@ import {
   AlertTriangle,
   ShieldAlert,
   Info,
+  CheckCircle2,
 } from "lucide-react";
 import { useEffect, useState, useCallback, useRef } from "react";
 
 export interface ErrorToastProps {
   message: string;
-  type?: "error" | "warning" | "network" | "microphone" | "info";
+  type?: "error" | "warning" | "network" | "microphone" | "info" | "success";
   onDismiss?: () => void;
   onRetry?: () => void;
   autoDismiss?: boolean;
@@ -72,6 +73,16 @@ const TOAST_CONFIG = {
     accentBg: "bg-sky-500/20",
     progressBar: "bg-sky-500",
     glow: "shadow-sky-500/10",
+  },
+  success: {
+    icon: CheckCircle2,
+    label: "Success",
+    bg: "bg-emerald-950/80 dark:bg-emerald-950/90",
+    border: "border-emerald-500/30",
+    accent: "text-emerald-400",
+    accentBg: "bg-emerald-500/20",
+    progressBar: "bg-emerald-500",
+    glow: "shadow-emerald-500/10",
   },
 };
 
@@ -219,7 +230,7 @@ export function useErrorToast() {
     Array<{
       id: string;
       message: string;
-      type: "error" | "warning" | "network" | "microphone" | "info";
+      type: "error" | "warning" | "network" | "microphone" | "info" | "success";
       onRetry?: () => void;
     }>
   >([]);
@@ -227,7 +238,13 @@ export function useErrorToast() {
   const showError = useCallback(
     (
       message: string,
-      type: "error" | "warning" | "network" | "microphone" | "info" = "error",
+      type:
+        | "error"
+        | "warning"
+        | "network"
+        | "microphone"
+        | "info"
+        | "success" = "error",
       onRetry?: () => void,
     ) => {
       // Deduplicate: don't show the same message if already visible
