@@ -37,12 +37,9 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // ═══════════════════════════════════════════════════
-  // PUBLIC routes — always accessible (no auth needed)
-  // Only the welcome page and auth callback are public.
-  // API routes handle their own auth internally.
+  // BYPASS: Auth callback must always be accessible
   // ═══════════════════════════════════════════════════
-  const publicRoutes = ["/welcome", "/auth/callback"];
-  if (publicRoutes.some((route) => pathname.startsWith(route))) {
+  if (pathname.startsWith("/auth/callback")) {
     return supabaseResponse;
   }
 
@@ -52,15 +49,22 @@ export async function middleware(request: NextRequest) {
   }
 
   // ═══════════════════════════════════════════════════
-  // AUTHENTICATED routes — require login
+  // UNAUTHENTICATED users
   // ═══════════════════════════════════════════════════
   if (!user) {
+    // Unauthenticated users can ONLY access /welcome
+    if (pathname === "/welcome") {
+      return supabaseResponse;
+    }
+    // Everything else → redirect to /welcome
     const url = request.nextUrl.clone();
     url.pathname = "/welcome";
     return NextResponse.redirect(url);
   }
 
-  // Fetch user profile to check status
+  // ═══════════════════════════════════════════════════
+  // AUTHENTICATED users — fetch profile for gating
+  // ═══════════════════════════════════════════════════
   const { data: profile } = await supabase
     .from("users")
     .select("payment_status, gemini_api_key")
@@ -68,6 +72,22 @@ export async function middleware(request: NextRequest) {
     .single();
 
   const isAdmin = user.email === process.env.ADMIN_EMAIL;
+  const isPaid = profile?.payment_status === "paid" || isAdmin;
+  const hasGeminiKey = !!profile?.gemini_api_key;
+
+  // ─── Logged-in users must NEVER see /welcome ───
+  // Redirect them to the appropriate page based on their status
+  if (pathname === "/welcome") {
+    const url = request.nextUrl.clone();
+    if (!isPaid) {
+      url.pathname = "/pending";
+    } else if (!hasGeminiKey && !isAdmin) {
+      url.pathname = "/setup";
+    } else {
+      url.pathname = "/";
+    }
+    return NextResponse.redirect(url);
+  }
 
   // ─── Admin route protection ───
   if (pathname.startsWith("/admin")) {
@@ -80,27 +100,38 @@ export async function middleware(request: NextRequest) {
   }
 
   // ─── Payment gating ───
-  const isPaid = profile?.payment_status === "paid" || isAdmin;
-  const hasGeminiKey = !!profile?.gemini_api_key;
 
-  // Not paid → redirect to pending
-  if (!isPaid && pathname !== "/pending") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/pending";
-    return NextResponse.redirect(url);
+  // Not paid → can ONLY access /pending
+  if (!isPaid) {
+    if (pathname !== "/pending") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/pending";
+      return NextResponse.redirect(url);
+    }
+    return supabaseResponse;
   }
 
-  // Paid but no Gemini key → redirect to setup
-  if (isPaid && !hasGeminiKey && pathname !== "/setup" && !isAdmin) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/setup";
-    return NextResponse.redirect(url);
+  // Paid but no Gemini key → can ONLY access /setup (unless admin)
+  if (isPaid && !hasGeminiKey && !isAdmin) {
+    if (pathname !== "/setup") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/setup";
+      return NextResponse.redirect(url);
+    }
+    return supabaseResponse;
   }
 
   // Paid user trying to access /pending → redirect to main app
   if (isPaid && pathname === "/pending") {
     const url = request.nextUrl.clone();
     url.pathname = hasGeminiKey ? "/" : "/setup";
+    return NextResponse.redirect(url);
+  }
+
+  // Paid user with key trying to access /setup → redirect to main app
+  if (isPaid && hasGeminiKey && pathname === "/setup") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
