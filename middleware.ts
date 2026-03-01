@@ -37,14 +37,39 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // ═══════════════════════════════════════════════════
-  // BYPASS: Always allow these routes
+  // BYPASS: Always allow these routes through
   // ═══════════════════════════════════════════════════
   if (pathname.startsWith("/auth/callback") || pathname.startsWith("/api")) {
     return supabaseResponse;
   }
 
   // ═══════════════════════════════════════════════════
+  // ADMIN CHECK — case-insensitive email comparison
+  // ═══════════════════════════════════════════════════
+  const adminEmail = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+  const userEmail = (user?.email || "").trim().toLowerCase();
+  const isAdmin = !!user && adminEmail !== "" && userEmail === adminEmail;
+
+  // ═══════════════════════════════════════════════════
+  // ADMIN EARLY BYPASS — admin can access EVERYTHING
+  // regardless of maintenance/waitlist mode.
+  // Only redirect admin away from mode-specific pages
+  // when those modes are OFF.
+  // ═══════════════════════════════════════════════════
+  if (isAdmin) {
+    // Admin should never see /welcome
+    if (pathname === "/welcome") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
+    // Let admin access everything: /, /admin, /pending, /setup, etc.
+    return supabaseResponse;
+  }
+
+  // ═══════════════════════════════════════════════════
   // Fetch app settings (maintenance, waitlist modes)
+  // Only needed for non-admin users
   // ═══════════════════════════════════════════════════
   const { data: settings } = await supabase
     .from("app_settings")
@@ -54,36 +79,32 @@ export async function middleware(request: NextRequest) {
 
   const maintenanceMode = settings?.maintenance_mode ?? false;
   const waitlistMode = settings?.waitlist_mode ?? false;
-  const isAdmin = user?.email === process.env.ADMIN_EMAIL;
 
   // ═══════════════════════════════════════════════════
-  // MAINTENANCE MODE — only admin can use the app
-  // Everyone else sees /maintenance
+  // MAINTENANCE MODE — ALL non-admin users blocked
   // ═══════════════════════════════════════════════════
-  if (maintenanceMode && !isAdmin) {
-    // Allow /maintenance and /welcome (for login)
+  if (maintenanceMode) {
     if (pathname === "/maintenance") {
       return supabaseResponse;
     }
-    // If not logged in, allow /welcome so they can see something
+    // Allow unauthenticated to see /welcome so they know the app exists
     if (!user && pathname === "/welcome") {
       return supabaseResponse;
     }
-    // Redirect everything else to /maintenance
     const url = request.nextUrl.clone();
     url.pathname = "/maintenance";
     return NextResponse.redirect(url);
   }
 
-  // If admin and maintenance is on, don't show /maintenance to admin
-  if (!maintenanceMode && pathname === "/maintenance") {
+  // Maintenance is OFF — redirect away from /maintenance page
+  if (pathname === "/maintenance") {
     const url = request.nextUrl.clone();
     url.pathname = user ? "/" : "/welcome";
     return NextResponse.redirect(url);
   }
 
   // ═══════════════════════════════════════════════════
-  // UNAUTHENTICATED users
+  // UNAUTHENTICATED users — can only see /welcome
   // ═══════════════════════════════════════════════════
   if (!user) {
     if (pathname === "/welcome") {
@@ -95,7 +116,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // ═══════════════════════════════════════════════════
-  // AUTHENTICATED users — fetch profile for gating
+  // AUTHENTICATED NON-ADMIN users — fetch profile
   // ═══════════════════════════════════════════════════
   const { data: profile } = await supabase
     .from("users")
@@ -103,22 +124,16 @@ export async function middleware(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  const isPaid = profile?.payment_status === "paid" || isAdmin;
+  const isPaid = profile?.payment_status === "paid";
   const hasGeminiKey = !!profile?.gemini_api_key;
 
   // ═══════════════════════════════════════════════════
-  // WAITLIST MODE — users can sign up & pay, but
-  // paid users see /waitlist instead of the main app
-  // Admin is exempt.
+  // WAITLIST MODE — users can sign up & pay,
+  // but paid users see /waitlist instead of main app
   // ═══════════════════════════════════════════════════
-  if (waitlistMode && !isAdmin) {
-    // Not paid → allow /pending (payment flow)
+  if (waitlistMode) {
+    // Not paid → allow /pending for payment flow
     if (!isPaid) {
-      if (pathname === "/welcome") {
-        const url = request.nextUrl.clone();
-        url.pathname = "/pending";
-        return NextResponse.redirect(url);
-      }
       if (pathname === "/pending") {
         return supabaseResponse;
       }
@@ -127,7 +142,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // Paid but waitlist on → show /waitlist
+    // Paid → show /waitlist
     if (pathname === "/waitlist") {
       return supabaseResponse;
     }
@@ -136,8 +151,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // If waitlist mode OFF but user visits /waitlist → redirect away
-  if (!waitlistMode && pathname === "/waitlist") {
+  // Waitlist OFF → redirect away from /waitlist
+  if (pathname === "/waitlist") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
@@ -148,7 +163,7 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     if (!isPaid) {
       url.pathname = "/pending";
-    } else if (!hasGeminiKey && !isAdmin) {
+    } else if (!hasGeminiKey) {
       url.pathname = "/setup";
     } else {
       url.pathname = "/";
@@ -156,19 +171,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // ─── Admin route protection ───
+  // ─── /admin is admin-only (already handled above) ───
   if (pathname.startsWith("/admin")) {
-    if (!isAdmin) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/";
-      return NextResponse.redirect(url);
-    }
-    return supabaseResponse;
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
   }
 
   // ─── Payment gating ───
-
-  // Not paid → can ONLY access /pending
   if (!isPaid) {
     if (pathname !== "/pending") {
       const url = request.nextUrl.clone();
@@ -178,8 +188,8 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Paid but no Gemini key → can ONLY access /setup (unless admin)
-  if (isPaid && !hasGeminiKey && !isAdmin) {
+  // Paid but no Gemini key → /setup only
+  if (!hasGeminiKey) {
     if (pathname !== "/setup") {
       const url = request.nextUrl.clone();
       url.pathname = "/setup";
@@ -188,15 +198,15 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Paid user trying to access /pending → redirect to main app
-  if (isPaid && pathname === "/pending") {
+  // Paid user visiting /pending → redirect to main app
+  if (pathname === "/pending") {
     const url = request.nextUrl.clone();
-    url.pathname = hasGeminiKey ? "/" : "/setup";
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
-  // Paid user with key trying to access /setup → redirect to main app
-  if (isPaid && hasGeminiKey && pathname === "/setup") {
+  // Paid user with key visiting /setup → redirect to main app
+  if (pathname === "/setup") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
