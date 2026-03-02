@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Copy,
@@ -9,10 +9,10 @@ import {
   RefreshCw,
   X,
   Send,
-  Play,
   BookOpen,
   Lightbulb,
   GraduationCap,
+  Layers,
   Pencil,
 } from "lucide-react";
 import type {
@@ -26,6 +26,7 @@ import type {
 import { PlanView } from "./plan-view";
 import { CodePreview } from "./code-preview";
 import { TypewriterText } from "./typewriter-text";
+import { FlippingCard } from "./ui/flipping-card";
 
 interface ResultDisplayProps {
   mode: Mode;
@@ -69,8 +70,6 @@ export function ResultDisplay({
   };
 
   const content = getContent();
-
-  // Can edit text in polish and craft modes
   const isTextEditable = mode === "polish" || mode === "craft";
 
   const handleCopy = async () => {
@@ -147,128 +146,7 @@ export function ResultDisplay({
         ) : mode === "build" ? (
           <CodePreview code={content} />
         ) : mode === "learn" && "study_title" in result ? (
-          (() => {
-            const learn = result as LearnResult;
-            return (
-              <div className="space-y-8">
-                {/* Header */}
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-foreground flex items-center justify-center shrink-0">
-                    <BookOpen className="w-6 h-6 text-background" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-xl font-bold leading-tight mb-1">
-                      {learn.study_title}
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                      {learn.key_concepts?.length || 0} concepts ·{" "}
-                      {learn.flashcards?.length || 0} flashcards
-                    </p>
-                  </div>
-                </div>
-
-                {/* Summary */}
-                {learn.summary && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="p-4 rounded-2xl bg-foreground/[0.03] border border-border"
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Lightbulb className="w-4 h-4 text-yellow-500" />
-                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Overview
-                      </span>
-                    </div>
-                    <p className="text-sm leading-relaxed">{learn.summary}</p>
-                  </motion.div>
-                )}
-
-                {/* Key Concepts */}
-                {learn.key_concepts?.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <GraduationCap className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Key Concepts
-                      </span>
-                    </div>
-                    <div className="grid gap-3">
-                      {learn.key_concepts.map((concept, i) => (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.15 + i * 0.05 }}
-                          className="flex gap-3 p-4 rounded-xl bg-background border border-border hover:border-foreground/20 transition-colors"
-                        >
-                          <span className="w-7 h-7 rounded-lg bg-foreground text-background text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
-                            {i + 1}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-sm mb-0.5">
-                              {concept.term}
-                            </p>
-                            <p className="text-xs text-muted-foreground leading-relaxed">
-                              {concept.explanation}
-                            </p>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Flashcards */}
-                {learn.flashcards?.length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <RefreshCw className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          Flashcards
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                        Tap to flip
-                      </span>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {learn.flashcards.map((card, i) => (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.2 + i * 0.05 }}
-                          className="group relative"
-                        >
-                          <details className="rounded-xl border border-border bg-background overflow-hidden cursor-pointer">
-                            <summary className="p-4 list-none select-none">
-                              <div className="flex items-start justify-between gap-2">
-                                <p className="font-medium text-sm leading-snug">
-                                  {card.question}
-                                </p>
-                                <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0 group-open:hidden">
-                                  ?
-                                </span>
-                              </div>
-                            </summary>
-                            <div className="px-4 pb-4 pt-0">
-                              <div className="h-px bg-border mb-3" />
-                              <p className="text-sm text-muted-foreground leading-relaxed">
-                                {card.answer}
-                              </p>
-                            </div>
-                          </details>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })()
+          <LearnView learn={result as LearnResult} />
         ) : isEditing ? (
           <div className="space-y-3">
             <textarea
@@ -450,5 +328,135 @@ export function ResultDisplay({
         )}
       </AnimatePresence>
     </motion.div>
+  );
+}
+
+// ── Learn Mode View ──
+function LearnView({ learn }: { learn: LearnResult }) {
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 rounded-2xl bg-foreground flex items-center justify-center shrink-0">
+          <BookOpen className="w-6 h-6 text-background" />
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-xl font-bold leading-tight mb-1">
+            {learn.study_title}
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            {learn.key_concepts?.length || 0} concepts ·{" "}
+            {learn.flashcards?.length || 0} flashcards
+          </p>
+        </div>
+      </div>
+
+      {/* Summary */}
+      {learn.summary && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="p-5 rounded-2xl bg-foreground/[0.03] border border-border"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <Lightbulb className="w-4 h-4 text-yellow-500" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Overview
+            </span>
+          </div>
+          <p className="text-sm leading-relaxed">{learn.summary}</p>
+        </motion.div>
+      )}
+
+      {/* Key Concepts */}
+      {learn.key_concepts?.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <GraduationCap className="w-4 h-4 text-muted-foreground" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Key Concepts
+            </span>
+          </div>
+          <div className="grid gap-3">
+            {learn.key_concepts.map((concept, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.15 + i * 0.05 }}
+                className="flex gap-4 p-4 rounded-xl bg-background border border-border hover:border-foreground/20 transition-colors"
+              >
+                <span className="w-8 h-8 rounded-xl bg-foreground text-background text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                  {i + 1}
+                </span>
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm mb-1">{concept.term}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {concept.explanation}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Flashcards */}
+      {learn.flashcards?.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Flashcards
+              </span>
+            </div>
+            <span className="text-[10px] text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+              Tap to flip
+            </span>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {learn.flashcards.map((card, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 + i * 0.06 }}
+                className="w-full"
+              >
+                <FlippingCard
+                  height={180}
+                  className="!w-full"
+                  frontContent={
+                    <div className="flex flex-col items-center justify-center h-full p-5 text-center relative">
+                      <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-3">
+                        Question
+                      </span>
+                      <p className="font-semibold text-sm leading-snug">
+                        {card.question}
+                      </p>
+                      <span className="absolute bottom-3 right-3 text-[10px] text-muted-foreground/40">
+                        {i + 1}/{learn.flashcards.length}
+                      </span>
+                    </div>
+                  }
+                  backContent={
+                    <div className="flex flex-col items-center justify-center h-full p-5 text-center">
+                      <span className="text-[10px] font-semibold uppercase tracking-widest text-emerald-500/70 mb-3">
+                        Answer
+                      </span>
+                      <p className="text-sm leading-relaxed text-muted-foreground">
+                        {card.answer}
+                      </p>
+                    </div>
+                  }
+                />
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
