@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Copy,
@@ -13,6 +13,7 @@ import {
   BookOpen,
   Lightbulb,
   GraduationCap,
+  Pencil,
 } from "lucide-react";
 import type {
   Mode,
@@ -31,7 +32,10 @@ interface ResultDisplayProps {
   result: PolishResult | PlanResult | CraftResult | BuildResult | LearnResult;
   onRefine: (instruction: string) => Promise<void>;
   onReset: () => void;
-  onSave: () => void;
+  onSave: (name: string) => void;
+  onUpdateResult?: (
+    result: PolishResult | PlanResult | CraftResult | BuildResult | LearnResult,
+  ) => void;
   isRefining: boolean;
 }
 
@@ -41,11 +45,18 @@ export function ResultDisplay({
   onRefine,
   onReset,
   onSave,
+  onUpdateResult,
   isRefining,
 }: ResultDisplayProps) {
   const [copied, setCopied] = useState(false);
   const [refineInput, setRefineInput] = useState("");
   const [showRefine, setShowRefine] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState("");
+  const saveInputRef = useRef<HTMLInputElement>(null);
+  const editTextRef = useRef<HTMLTextAreaElement>(null);
 
   const getContent = (): string => {
     if ("refined_text" in result) return result.refined_text;
@@ -59,8 +70,11 @@ export function ResultDisplay({
 
   const content = getContent();
 
+  // Can edit text in polish and craft modes
+  const isTextEditable = mode === "polish" || mode === "craft";
+
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(content);
+    await navigator.clipboard.writeText(isEditing ? editText : content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -70,6 +84,41 @@ export function ResultDisplay({
     await onRefine(refineInput);
     setRefineInput("");
     setShowRefine(false);
+  };
+
+  const handleSaveClick = () => {
+    const defaultName = `${mode}-${new Date().toISOString().split("T")[0]}`;
+    setSaveName(defaultName);
+    setShowSaveDialog(true);
+    setTimeout(() => saveInputRef.current?.select(), 100);
+  };
+
+  const handleSaveConfirm = () => {
+    if (!saveName.trim()) return;
+    onSave(saveName.trim());
+    setShowSaveDialog(false);
+    setSaveName("");
+  };
+
+  const handleStartEdit = () => {
+    setEditText(content);
+    setIsEditing(true);
+    setTimeout(() => editTextRef.current?.focus(), 100);
+  };
+
+  const handleSaveEdit = () => {
+    if (!onUpdateResult) return;
+    if (mode === "polish") {
+      onUpdateResult({ refined_text: editText });
+    } else if (mode === "craft") {
+      onUpdateResult({ generated_content: editText });
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditText("");
   };
 
   return (
@@ -220,12 +269,46 @@ export function ResultDisplay({
               </div>
             );
           })()
+        ) : isEditing ? (
+          <div className="space-y-3">
+            <textarea
+              ref={editTextRef}
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              className="w-full min-h-[200px] p-4 rounded-xl bg-background border border-border text-foreground text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-foreground/20 resize-y"
+            />
+            <div className="flex items-center gap-2 justify-end">
+              <button
+                onClick={handleCancelEdit}
+                className="px-4 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                className="px-4 py-2 rounded-lg bg-foreground text-background text-xs font-medium hover:opacity-90 transition-opacity"
+              >
+                Done
+              </button>
+            </div>
+          </div>
         ) : (
-          <TypewriterText
-            text={content}
-            speed={10}
-            className="prose prose-neutral dark:prose-invert max-w-none"
-          />
+          <div className="relative group">
+            <TypewriterText
+              text={content}
+              speed={10}
+              className="prose prose-neutral dark:prose-invert max-w-none"
+            />
+            {isTextEditable && (
+              <button
+                onClick={handleStartEdit}
+                className="absolute top-2 right-2 p-2 rounded-lg bg-muted/80 hover:bg-muted opacity-0 group-hover:opacity-100 transition-all"
+                aria-label="Edit text"
+              >
+                <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -246,7 +329,7 @@ export function ResultDisplay({
         </motion.button>
 
         <motion.button
-          onClick={onSave}
+          onClick={handleSaveClick}
           className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full bg-muted hover:bg-muted/80 text-foreground text-xs sm:text-sm font-medium transition-colors"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -254,6 +337,18 @@ export function ResultDisplay({
           <Bookmark className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           Save
         </motion.button>
+
+        {isTextEditable && !isEditing && (
+          <motion.button
+            onClick={handleStartEdit}
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full bg-muted hover:bg-muted/80 text-foreground text-xs sm:text-sm font-medium transition-colors"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            Edit
+          </motion.button>
+        )}
 
         <motion.button
           onClick={() => setShowRefine(!showRefine)}
@@ -265,6 +360,58 @@ export function ResultDisplay({
           Refine
         </motion.button>
       </div>
+
+      {/* Save Name Dialog */}
+      <AnimatePresence>
+        {showSaveDialog && (
+          <motion.div
+            className="fixed inset-0 z-[60] flex items-center justify-center px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowSaveDialog(false)}
+            />
+            <motion.div
+              className="relative w-full max-w-sm bg-background border border-border rounded-2xl shadow-2xl p-5"
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            >
+              <h3 className="text-sm font-semibold mb-3">Save as</h3>
+              <input
+                ref={saveInputRef}
+                type="text"
+                value={saveName}
+                onChange={(e) => setSaveName(e.target.value)}
+                placeholder="Enter a name..."
+                className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSaveConfirm();
+                  if (e.key === "Escape") setShowSaveDialog(false);
+                }}
+              />
+              <div className="flex items-center justify-end gap-2 mt-4">
+                <button
+                  onClick={() => setShowSaveDialog(false)}
+                  className="px-4 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveConfirm}
+                  disabled={!saveName.trim()}
+                  className="px-4 py-2 rounded-lg bg-foreground text-background text-xs font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+                >
+                  Save
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Refine input */}
       <AnimatePresence>

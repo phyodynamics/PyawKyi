@@ -3,7 +3,16 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
-import { History, LogOut, X, Trash2, Code2, AlertCircle } from "lucide-react";
+import {
+  History,
+  LogOut,
+  X,
+  Trash2,
+  Code2,
+  AlertCircle,
+  Pencil,
+  Check,
+} from "lucide-react";
 import Image from "next/image";
 import { WelcomeAnimation } from "@/components/welcome-animation";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -71,12 +80,117 @@ const MODE_EMOJI: Record<Mode, string> = {
   learn: "📚",
 };
 
-interface HistoryItem {
+interface HistoryItemData {
   id: string;
   mode: Mode;
   name: string;
   content: string;
   created_at: string;
+}
+
+// History item with editable title
+function HistoryItemCard({
+  item,
+  onLoad,
+  onDelete,
+  onRename,
+}: {
+  item: HistoryItemData;
+  onLoad: (item: HistoryItemData) => void;
+  onDelete: (id: string) => void;
+  onRename: (id: string, name: string) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(item.name);
+
+  return (
+    <motion.div
+      className="group p-3 rounded-xl border border-border hover:bg-muted/50 cursor-pointer transition-colors"
+      onClick={() => !isEditing && onLoad(item)}
+      whileHover={{ scale: isEditing ? 1 : 1.01 }}
+      whileTap={{ scale: isEditing ? 1 : 0.99 }}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="shrink-0">{MODE_EMOJI[item.mode]}</span>
+            {isEditing ? (
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    onRename(item.id, editName);
+                    setIsEditing(false);
+                  }
+                  if (e.key === "Escape") {
+                    setEditName(item.name);
+                    setIsEditing(false);
+                  }
+                }}
+                className="text-xs font-medium bg-muted border border-border rounded-md px-2 py-0.5 w-full focus:outline-none focus:ring-1 focus:ring-foreground/20"
+                autoFocus
+              />
+            ) : (
+              <>
+                <span className="text-xs font-medium truncate">
+                  {item.name}
+                </span>
+                <span className="text-[10px] text-muted-foreground/60 capitalize shrink-0">
+                  · {item.mode}
+                </span>
+              </>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground truncate">
+            {item.content.slice(0, 80)}...
+          </p>
+          <p className="text-[10px] text-muted-foreground/60 mt-1">
+            {new Date(item.created_at).toLocaleDateString()} ·{" "}
+            {new Date(item.created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+        </div>
+        <div className="flex items-center gap-0.5 shrink-0">
+          {isEditing ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRename(item.id, editName);
+                setIsEditing(false);
+              }}
+              className="p-1.5 rounded-lg hover:bg-emerald-500/10 text-emerald-500 transition-all"
+            >
+              <Check className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(true);
+              }}
+              className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-muted text-muted-foreground transition-all"
+            >
+              <Pencil className="w-3 h-3" />
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(item.id);
+            }}
+            className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
 }
 
 export default function Home() {
@@ -91,7 +205,7 @@ export default function Home() {
     PolishResult | PlanResult | CraftResult | BuildResult | LearnResult | null
   >(null);
   const [error, setError] = useState<string | null>(null);
-  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+  const [historyItems, setHistoryItems] = useState<HistoryItemData[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [craftImage, setCraftImage] = useState<File | null>(null);
@@ -322,93 +436,97 @@ export default function Home() {
   }, [resetRecording]);
 
   // Save to Supabase
-  const handleSave = useCallback(async () => {
-    if (!result) return;
+  const handleSave = useCallback(
+    async (name: string) => {
+      if (!result) return;
 
-    let content = "";
-    try {
-      switch (currentMode) {
-        case "polish":
-          if ("refined_text" in result) content = result.refined_text;
-          break;
-        case "plan":
-          content = JSON.stringify(result, null, 2);
-          break;
-        case "craft":
-          if ("generated_content" in result) content = result.generated_content;
-          break;
-        case "build":
-          if ("fixed_code" in result)
-            content = result.fixed_code || result.html_code;
-          else if ("html_code" in result) content = result.html_code;
-          break;
-        case "learn":
-          if ("study_title" in result) {
-            content = JSON.stringify(
-              {
-                study_title: result.study_title,
-                key_concepts: result.key_concepts || [],
-                summary: result.summary || "",
-                flashcards: result.flashcards || [],
-              },
-              null,
-              2,
-            );
-          } else {
+      let content = "";
+      try {
+        switch (currentMode) {
+          case "polish":
+            if ("refined_text" in result) content = result.refined_text;
+            break;
+          case "plan":
             content = JSON.stringify(result, null, 2);
-          }
-          break;
-      }
-    } catch {
-      showError("Failed to prepare content for saving.", "error");
-      return;
-    }
-
-    if (!content || content === "{}" || content === "null") {
-      showError("Nothing to save.", "error");
-      return;
-    }
-
-    try {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        showError("Not logged in. Please refresh and try again.", "error");
+            break;
+          case "craft":
+            if ("generated_content" in result)
+              content = result.generated_content;
+            break;
+          case "build":
+            if ("fixed_code" in result)
+              content = result.fixed_code || result.html_code;
+            else if ("html_code" in result) content = result.html_code;
+            break;
+          case "learn":
+            if ("study_title" in result) {
+              content = JSON.stringify(
+                {
+                  study_title: result.study_title,
+                  key_concepts: result.key_concepts || [],
+                  summary: result.summary || "",
+                  flashcards: result.flashcards || [],
+                },
+                null,
+                2,
+              );
+            } else {
+              content = JSON.stringify(result, null, 2);
+            }
+            break;
+        }
+      } catch {
+        showError("Failed to prepare content for saving.", "error");
         return;
       }
 
-      const { data, error } = await supabase
-        .from("saved_items")
-        .insert({
-          user_id: user.id,
-          mode: currentMode,
-          name: `${currentMode}-${new Date().toISOString().split("T")[0]}-${Date.now().toString(36)}`,
-          content,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Save error:", error);
-        showError(
-          `Failed to save: ${error.message || "Unknown error"}`,
-          "error",
-        );
-      } else if (data) {
-        setHistoryItems((prev) => [data, ...prev]);
-        showError("Saved to history!", "success");
+      if (!content || content === "{}" || content === "null") {
+        showError("Nothing to save.", "error");
+        return;
       }
-    } catch (err) {
-      console.error("Save exception:", err);
-      showError("Failed to save. Please try again.", "error");
-    }
-  }, [result, currentMode, showError]);
+
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          showError("Not logged in. Please refresh and try again.", "error");
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("saved_items")
+          .insert({
+            user_id: user.id,
+            mode: currentMode,
+            name,
+            content,
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Save error:", error);
+          showError(
+            `Failed to save: ${error.message || "Unknown error"}`,
+            "error",
+          );
+        } else if (data) {
+          setHistoryItems((prev) => [data, ...prev]);
+          showError("Saved to history!", "success");
+        }
+      } catch (err) {
+        console.error("Save exception:", err);
+        showError("Failed to save. Please try again.", "error");
+      }
+    },
+    [result, currentMode, showError],
+  );
 
   // Load from history
-  const handleLoadHistory = useCallback((item: HistoryItem) => {
+  const handleLoadHistory = useCallback((item: HistoryItemData) => {
     setCurrentMode(item.mode);
     switch (item.mode) {
       case "polish":
@@ -455,6 +573,23 @@ export default function Home() {
     await supabase.from("saved_items").delete().eq("id", id);
     setHistoryItems((prev) => prev.filter((item) => item.id !== id));
   }, []);
+
+  const handleRenameHistory = useCallback(
+    async (id: string, newName: string) => {
+      if (!newName.trim()) return;
+      const supabase = createClient();
+      await supabase
+        .from("saved_items")
+        .update({ name: newName.trim() })
+        .eq("id", id);
+      setHistoryItems((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, name: newName.trim() } : item,
+        ),
+      );
+    },
+    [],
+  );
 
   const handleLogout = useCallback(async () => {
     const supabase = createClient();
@@ -567,6 +702,7 @@ export default function Home() {
                 onRefine={handleRefine}
                 onReset={handleReset}
                 onSave={handleSave}
+                onUpdateResult={setResult}
                 isRefining={isRefining}
               />
             ) : (
@@ -708,43 +844,13 @@ export default function Home() {
                   </div>
                 ) : (
                   historyItems.map((item) => (
-                    <motion.div
+                    <HistoryItemCard
                       key={item.id}
-                      className="group p-3 rounded-xl border border-border hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => handleLoadHistory(item)}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span>{MODE_EMOJI[item.mode]}</span>
-                            <span className="text-xs font-medium capitalize">
-                              {item.mode}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {item.content.slice(0, 80)}...
-                          </p>
-                          <p className="text-[10px] text-muted-foreground/60 mt-1">
-                            {new Date(item.created_at).toLocaleDateString()} ·{" "}
-                            {new Date(item.created_at).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteHistory(item.id);
-                          }}
-                          className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </motion.div>
+                      item={item}
+                      onLoad={handleLoadHistory}
+                      onDelete={handleDeleteHistory}
+                      onRename={handleRenameHistory}
+                    />
                   ))
                 )}
               </div>
