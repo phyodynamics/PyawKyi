@@ -326,37 +326,60 @@ export default function Home() {
     if (!result) return;
 
     let content = "";
-    switch (currentMode) {
-      case "polish":
-        if ("refined_text" in result) content = result.refined_text;
-        break;
-      case "plan":
-        content = JSON.stringify(result, null, 2);
-        break;
-      case "craft":
-        if ("generated_content" in result) content = result.generated_content;
-        break;
-      case "build":
-        if ("fixed_code" in result)
-          content = result.fixed_code || result.html_code;
-        else if ("html_code" in result) content = result.html_code;
-        break;
-      case "learn":
-        content = JSON.stringify(result, null, 2);
-        break;
+    try {
+      switch (currentMode) {
+        case "polish":
+          if ("refined_text" in result) content = result.refined_text;
+          break;
+        case "plan":
+          content = JSON.stringify(result, null, 2);
+          break;
+        case "craft":
+          if ("generated_content" in result) content = result.generated_content;
+          break;
+        case "build":
+          if ("fixed_code" in result)
+            content = result.fixed_code || result.html_code;
+          else if ("html_code" in result) content = result.html_code;
+          break;
+        case "learn":
+          if ("study_title" in result) {
+            content = JSON.stringify(
+              {
+                study_title: result.study_title,
+                key_concepts: result.key_concepts || [],
+                summary: result.summary || "",
+                flashcards: result.flashcards || [],
+              },
+              null,
+              2,
+            );
+          } else {
+            content = JSON.stringify(result, null, 2);
+          }
+          break;
+      }
+    } catch {
+      showError("Failed to prepare content for saving.", "error");
+      return;
     }
 
-    if (!content) {
+    if (!content || content === "{}" || content === "null") {
       showError("Nothing to save.", "error");
       return;
     }
 
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (user) {
+      if (!user) {
+        showError("Not logged in. Please refresh and try again.", "error");
+        return;
+      }
+
       const { data, error } = await supabase
         .from("saved_items")
         .insert({
@@ -369,11 +392,18 @@ export default function Home() {
         .single();
 
       if (error) {
-        showError("Failed to save. Please try again.", "error");
+        console.error("Save error:", error);
+        showError(
+          `Failed to save: ${error.message || "Unknown error"}`,
+          "error",
+        );
       } else if (data) {
         setHistoryItems((prev) => [data, ...prev]);
         showError("Saved to history!", "success");
       }
+    } catch (err) {
+      console.error("Save exception:", err);
+      showError("Failed to save. Please try again.", "error");
     }
   }, [result, currentMode, showError]);
 
