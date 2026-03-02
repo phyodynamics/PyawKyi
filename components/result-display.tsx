@@ -34,6 +34,8 @@ interface ResultDisplayProps {
   onRefine: (instruction: string) => Promise<void>;
   onReset: () => void;
   onSave: (name: string) => void;
+  onUpdate?: () => void;
+  isFromHistory?: boolean;
   onUpdateResult?: (
     result: PolishResult | PlanResult | CraftResult | BuildResult | LearnResult,
   ) => void;
@@ -46,6 +48,8 @@ export function ResultDisplay({
   onRefine,
   onReset,
   onSave,
+  onUpdate,
+  isFromHistory,
   onUpdateResult,
   isRefining,
 }: ResultDisplayProps) {
@@ -206,15 +210,27 @@ export function ResultDisplay({
           {copied ? "Copied" : "Copy"}
         </motion.button>
 
-        <motion.button
-          onClick={handleSaveClick}
-          className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full bg-muted hover:bg-muted/80 text-foreground text-xs sm:text-sm font-medium transition-colors"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <Bookmark className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          Save
-        </motion.button>
+        {isFromHistory && onUpdate ? (
+          <motion.button
+            onClick={onUpdate}
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full bg-muted hover:bg-muted/80 text-foreground text-xs sm:text-sm font-medium transition-colors"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Bookmark className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            Update
+          </motion.button>
+        ) : (
+          <motion.button
+            onClick={handleSaveClick}
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full bg-muted hover:bg-muted/80 text-foreground text-xs sm:text-sm font-medium transition-colors"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Bookmark className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            Save
+          </motion.button>
+        )}
 
         {isTextEditable && !isEditing && (
           <motion.button

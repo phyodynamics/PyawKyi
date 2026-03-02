@@ -214,6 +214,7 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [showApiPanel, setShowApiPanel] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
 
   const { errors, showError, dismissError } = useErrorToast();
 
@@ -432,6 +433,7 @@ export default function Home() {
   const handleReset = useCallback(() => {
     setResult(null);
     setError(null);
+    setActiveHistoryId(null);
     resetRecording();
   }, [resetRecording]);
 
@@ -564,8 +566,84 @@ export default function Home() {
         }
         break;
     }
+    setActiveHistoryId(item.id);
     setShowHistory(false);
   }, []);
+
+  // Update existing history item in Supabase
+  const handleUpdateHistory = useCallback(async () => {
+    if (!result || !activeHistoryId) return;
+
+    let content = "";
+    try {
+      switch (currentMode) {
+        case "polish":
+          if ("refined_text" in result) content = result.refined_text;
+          break;
+        case "plan":
+          content = JSON.stringify(result, null, 2);
+          break;
+        case "craft":
+          if ("generated_content" in result) content = result.generated_content;
+          break;
+        case "build":
+          if ("fixed_code" in result)
+            content = result.fixed_code || result.html_code;
+          else if ("html_code" in result) content = result.html_code;
+          break;
+        case "learn":
+          if ("study_title" in result) {
+            content = JSON.stringify(
+              {
+                study_title: result.study_title,
+                key_concepts: result.key_concepts || [],
+                summary: result.summary || "",
+                flashcards: result.flashcards || [],
+              },
+              null,
+              2,
+            );
+          } else {
+            content = JSON.stringify(result, null, 2);
+          }
+          break;
+      }
+    } catch {
+      showError("Failed to prepare content.", "error");
+      return;
+    }
+
+    if (!content || content === "{}" || content === "null") {
+      showError("Nothing to update.", "error");
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("saved_items")
+        .update({ content })
+        .eq("id", activeHistoryId);
+
+      if (error) {
+        console.error("Update error:", error);
+        showError(
+          `Failed to update: ${error.message || "Unknown error"}`,
+          "error",
+        );
+      } else {
+        setHistoryItems((prev) =>
+          prev.map((item) =>
+            item.id === activeHistoryId ? { ...item, content } : item,
+          ),
+        );
+        showError("Updated!", "success");
+      }
+    } catch (err) {
+      console.error("Update exception:", err);
+      showError("Failed to update. Please try again.", "error");
+    }
+  }, [result, currentMode, activeHistoryId, showError]);
 
   // Delete from Supabase
   const handleDeleteHistory = useCallback(async (id: string) => {
@@ -702,6 +780,8 @@ export default function Home() {
                 onRefine={handleRefine}
                 onReset={handleReset}
                 onSave={handleSave}
+                onUpdate={activeHistoryId ? handleUpdateHistory : undefined}
+                isFromHistory={!!activeHistoryId}
                 onUpdateResult={setResult}
                 isRefining={isRefining}
               />
