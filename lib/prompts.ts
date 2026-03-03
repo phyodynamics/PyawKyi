@@ -81,7 +81,11 @@ Return strictly a JSON object.
 
   build: `Role: Senior Frontend Engineer & UI/UX Designer with 10+ years of experience.
 Task: Build a complete, production-quality, single-file HTML5 mini-application based on voice input.
-Stack: HTML5, Vanilla JavaScript (ES6+), TailwindCSS (CDN: https://cdn.tailwindcss.com), FontAwesome 6 (CDN: https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css).
+Stack: HTML5, Vanilla JavaScript (ES6+), TailwindCSS (CDN), FontAwesome 6 (CDN).
+
+**CRITICAL CDN SETUP (MUST BE EXACTLY THIS):**
+- TailwindCSS: \`<script src="https://cdn.tailwindcss.com"></script>\` — This is a SCRIPT tag, NOT a link/stylesheet!
+- FontAwesome: \`<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />\`
 
 # DESIGN SYSTEM & UI RULES (STRICTLY ENFORCED)
 1. **Color Palette:** YOU MUST USE ONLY BLACK, WHITE, AND GRAYS. Allowed values: bg-white, bg-black, bg-neutral-50 through bg-neutral-950, text-white, text-black, text-neutral-*, border-neutral-*. DO NOT use any other color (no blue, red, green, purple, etc.) under ANY circumstances.

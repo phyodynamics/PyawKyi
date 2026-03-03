@@ -44,6 +44,12 @@ export function CodePreview({ code }: CodePreviewProps) {
   const fullHtml = useMemo(() => {
     let html = cleanCode;
 
+    // Fix common AI mistake: TailwindCSS loaded as <link> instead of <script>
+    html = html.replace(
+      /<link[^>]*href=["']https:\/\/cdn\.tailwindcss\.com["'][^>]*\/?>/gi,
+      '<script src="https://cdn.tailwindcss.com"><' + "/script>",
+    );
+
     const hasDoctype = /<!DOCTYPE\s+html>/i.test(html);
     const hasHtmlTag = /<html[\s>]/i.test(html);
     const hasBody = /<body[\s>]/i.test(html);
@@ -59,12 +65,13 @@ export function CodePreview({ code }: CodePreviewProps) {
         '  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />',
         "</head>",
         "<body>",
-        code,
+        cleanCode,
         "</body>",
         "</html>",
       ].join("\n");
     } else {
-      if (!html.includes("tailwindcss.com")) {
+      // Ensure TailwindCSS script is present
+      if (!html.includes("cdn.tailwindcss.com")) {
         html = html.replace(
           /<\/head>/i,
           '<script src="https://cdn.tailwindcss.com"><' + "/script>\n</head>",
