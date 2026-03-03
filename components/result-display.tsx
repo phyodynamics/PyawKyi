@@ -146,7 +146,7 @@ export function ResultDisplay({
       {/* Content */}
       <div className="bg-muted/50 rounded-2xl p-4 md:p-6 border border-border">
         {mode === "plan" && "plan_title" in result ? (
-          <PlanView plan={result as PlanResult} />
+          <PlanView plan={result as PlanResult} onChange={onUpdateResult} />
         ) : mode === "build" ? (
           <CodePreview code={content} />
         ) : mode === "learn" && "study_title" in result ? (

@@ -15,10 +15,13 @@ import type { PlanResult } from "@/lib/types";
 
 interface PlanViewProps {
   plan: PlanResult;
+  onChange?: (updated: PlanResult) => void;
 }
 
-export function PlanView({ plan }: PlanViewProps) {
-  const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set());
+export function PlanView({ plan, onChange }: PlanViewProps) {
+  const [checkedItems, setCheckedItems] = useState<Set<number>>(
+    () => new Set(plan.checked_items || []),
+  );
 
   const toggleItem = (index: number) => {
     setCheckedItems((prev) => {
@@ -27,6 +30,10 @@ export function PlanView({ plan }: PlanViewProps) {
         newSet.delete(index);
       } else {
         newSet.add(index);
+      }
+      // Propagate to parent so result state stays in sync
+      if (onChange) {
+        onChange({ ...plan, checked_items: Array.from(newSet) });
       }
       return newSet;
     });

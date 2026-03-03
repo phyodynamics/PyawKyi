@@ -15,6 +15,7 @@ export interface PlanResult {
   plan_title: string;
   schedule: Array<{ time: string; activity: string }>;
   checklist: string[];
+  checked_items?: number[];
 }
 
 export interface CraftResult {
