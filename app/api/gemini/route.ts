@@ -122,6 +122,7 @@ async function callGeminiWithAudio(
   apiKey: string,
   imageBase64?: string,
   imageMimeType?: string,
+  maxTokens?: number,
 ): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -173,7 +174,7 @@ async function callGeminiWithAudio(
         temperature: 0.7,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 8192,
+        maxOutputTokens: maxTokens || 8192,
         responseMimeType: "application/json",
       },
     }),
@@ -384,6 +385,10 @@ export async function POST(request: NextRequest) {
       try {
         console.log(`[Gemini API] Trying model: ${model}, isAudio: ${isAudio}`);
         if (isAudio && audioBase64) {
+          // Detect if this is a build mode call (needs more tokens for HTML)
+          const isBuildMode =
+            systemPrompt.includes("Frontend Engineer") ||
+            systemPrompt.includes("HTML5 mini-application");
           result = await callGeminiWithAudio(
             systemPrompt,
             audioBase64,
@@ -392,6 +397,7 @@ export async function POST(request: NextRequest) {
             userApiKey,
             imageBase64,
             imageMimeType,
+            isBuildMode ? 65536 : undefined,
           );
         } else {
           result = await callGeminiAPI(
@@ -459,6 +465,19 @@ export async function POST(request: NextRequest) {
     // Try to parse as JSON
     try {
       const parsed = JSON.parse(cleanResult);
+      // Ensure html_code/fixed_code have real newlines
+      if (parsed.html_code && typeof parsed.html_code === "string") {
+        parsed.html_code = parsed.html_code
+          .replace(/\\n/g, "\n")
+          .replace(/\\t/g, "\t")
+          .replace(/\\"/g, '"');
+      }
+      if (parsed.fixed_code && typeof parsed.fixed_code === "string") {
+        parsed.fixed_code = parsed.fixed_code
+          .replace(/\\n/g, "\n")
+          .replace(/\\t/g, "\t")
+          .replace(/\\"/g, '"');
+      }
       return NextResponse.json({ result: parsed });
     } catch {
       // For HTML code responses, try to extract html_code directly
@@ -470,7 +489,6 @@ export async function POST(request: NextRequest) {
           const htmlCode = JSON.parse('"' + htmlCodeMatch[1] + '"');
           return NextResponse.json({ result: { html_code: htmlCode } });
         } catch {
-          // Try unescaping manually
           const rawHtml = htmlCodeMatch[1]
             .replace(/\\n/g, "\n")
             .replace(/\\t/g, "\t")
@@ -495,6 +513,25 @@ export async function POST(request: NextRequest) {
             .replace(/\\"/g, '"')
             .replace(/\\\\/g, "\\");
           return NextResponse.json({ result: { fixed_code: rawFixed } });
+        }
+      }
+
+      // If it looks like raw HTML (truncated JSON), try to extract it
+      if (cleanResult.includes("<!DOCTYPE") || cleanResult.includes("<html")) {
+        // Extract HTML from the raw string
+        const htmlStart = cleanResult.indexOf("<!DOCTYPE");
+        const htmlStartAlt = cleanResult.indexOf("<html");
+        const start = htmlStart >= 0 ? htmlStart : htmlStartAlt;
+        if (start >= 0) {
+          let htmlCode = cleanResult.slice(start);
+          // Clean trailing JSON artifacts
+          htmlCode = htmlCode.replace(/["'}\]\s]*$/, "");
+          htmlCode = htmlCode
+            .replace(/\\n/g, "\n")
+            .replace(/\\t/g, "\t")
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, "\\");
+          return NextResponse.json({ result: { html_code: htmlCode } });
         }
       }
 

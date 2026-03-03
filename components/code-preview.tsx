@@ -30,9 +30,19 @@ export function CodePreview({ code }: CodePreviewProps) {
     setMounted(true);
   }, []);
 
+  // Clean any escaped characters in the code
+  const cleanCode = useMemo(() => {
+    let c = code;
+    // If code still has literal \n or \t, unescape them
+    if (c.includes("\\n") && !c.includes("\n")) {
+      c = c.replace(/\\n/g, "\n").replace(/\\t/g, "\t").replace(/\\"/g, '"');
+    }
+    return c;
+  }, [code]);
+
   // Build a complete HTML document from the code
   const fullHtml = useMemo(() => {
-    let html = code;
+    let html = cleanCode;
 
     const hasDoctype = /<!DOCTYPE\s+html>/i.test(html);
     const hasHtmlTag = /<html[\s>]/i.test(html);
@@ -69,7 +79,7 @@ export function CodePreview({ code }: CodePreviewProps) {
     }
 
     return html;
-  }, [code]);
+  }, [cleanCode]);
 
   // Create a blob URL for the iframe src
   const blobUrl = useMemo(() => {
@@ -227,7 +237,7 @@ export function CodePreview({ code }: CodePreviewProps) {
             transition={{ duration: 0.2 }}
           >
             <pre className="bg-neutral-900 text-neutral-100 p-3 sm:p-4 rounded-xl overflow-x-auto text-xs sm:text-sm leading-relaxed max-h-[400px] md:max-h-[500px]">
-              <code>{code}</code>
+              <code>{cleanCode}</code>
             </pre>
           </motion.div>
         )}
