@@ -1,104 +1,124 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 
 export function useTTS() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Clean up on unmount
   useEffect(() => {
     return () => {
-      if (typeof window !== "undefined" && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      if (abortRef.current) {
+        abortRef.current.abort();
       }
     };
   }, []);
 
-  const findBestVoice = useCallback(
-    (text: string): SpeechSynthesisVoice | null => {
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length === 0) return null;
-
-      // Detect if text is Burmese (Myanmar Unicode range)
-      const isBurmese = /[\u1000-\u109F]/.test(text);
-      const targetLang = isBurmese ? "my" : "en";
-
-      // Priority: Microsoft voices > Google voices > any matching voice
-      const priorityOrder = ["Microsoft", "Google", "Apple"];
-
-      for (const vendor of priorityOrder) {
-        const match = voices.find(
-          (v) => v.lang.startsWith(targetLang) && v.name.includes(vendor),
-        );
-        if (match) return match;
-      }
-
-      // Fallback: any voice matching the language
-      const langMatch = voices.find((v) => v.lang.startsWith(targetLang));
-      if (langMatch) return langMatch;
-
-      // Last fallback: default voice
-      return voices.find((v) => v.default) || voices[0] || null;
-    },
-    [],
-  );
-
   const speak = useCallback(
-    (text: string, id: string) => {
-      if (typeof window === "undefined" || !window.speechSynthesis) return;
-
-      // If same id is already speaking, stop it
-      if (isSpeaking && activeId === id) {
-        window.speechSynthesis.cancel();
+    async (text: string, id: string) => {
+      // If same id is already playing, stop it
+      if ((isSpeaking || isLoading) && activeId === id) {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current = null;
+        }
+        if (abortRef.current) {
+          abortRef.current.abort();
+        }
         setIsSpeaking(false);
+        setIsLoading(false);
         setActiveId(null);
         return;
       }
 
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utteranceRef.current = utterance;
-
-      // Try to find the best voice
-      const voice = findBestVoice(text);
-      if (voice) {
-        utterance.voice = voice;
-        utterance.lang = voice.lang;
+      // Stop any current playback
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      if (abortRef.current) {
+        abortRef.current.abort();
       }
 
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
+      setIsLoading(true);
+      setActiveId(id);
 
-      utterance.onstart = () => {
-        setIsSpeaking(true);
-        setActiveId(id);
-      };
+      try {
+        const controller = new AbortController();
+        abortRef.current = controller;
 
-      utterance.onend = () => {
+        const response = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("TTS request failed");
+        }
+
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+
+        const audio = new Audio(audioUrl);
+        audioRef.current = audio;
+
+        audio.onplay = () => {
+          setIsLoading(false);
+          setIsSpeaking(true);
+        };
+
+        audio.onended = () => {
+          setIsSpeaking(false);
+          setActiveId(null);
+          URL.revokeObjectURL(audioUrl);
+          audioRef.current = null;
+        };
+
+        audio.onerror = () => {
+          setIsSpeaking(false);
+          setIsLoading(false);
+          setActiveId(null);
+          URL.revokeObjectURL(audioUrl);
+          audioRef.current = null;
+        };
+
+        await audio.play();
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          // User cancelled, ignore
+        } else {
+          console.error("TTS error:", error);
+        }
         setIsSpeaking(false);
+        setIsLoading(false);
         setActiveId(null);
-      };
-
-      utterance.onerror = () => {
-        setIsSpeaking(false);
-        setActiveId(null);
-      };
-
-      window.speechSynthesis.speak(utterance);
+      }
     },
-    [isSpeaking, activeId, findBestVoice],
+    [isSpeaking, isLoading, activeId],
   );
 
   const stop = useCallback(() => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
     setIsSpeaking(false);
+    setIsLoading(false);
     setActiveId(null);
   }, []);
 
-  return { speak, stop, isSpeaking, activeId };
+  return { speak, stop, isSpeaking: isSpeaking || isLoading, activeId };
 }
