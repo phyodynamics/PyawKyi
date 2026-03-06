@@ -14,6 +14,7 @@ import {
   GraduationCap,
   Layers,
   Pencil,
+  Volume2,
 } from "lucide-react";
 import type {
   Mode,
@@ -27,6 +28,7 @@ import { PlanView } from "./plan-view";
 import { CodePreview } from "./code-preview";
 import { TypewriterText } from "./typewriter-text";
 import { FlippingCard } from "./ui/flipping-card";
+import { useTTS } from "@/hooks/use-tts";
 
 interface ResultDisplayProps {
   mode: Mode;
@@ -349,6 +351,23 @@ export function ResultDisplay({
 
 // ── Learn Mode View ──
 function LearnView({ learn }: { learn: LearnResult }) {
+  const { speak, stop, isSpeaking, activeId } = useTTS();
+
+  const handleSpeakAll = () => {
+    if (isSpeaking && activeId === "all") {
+      stop();
+      return;
+    }
+    const allText = [
+      learn.study_title,
+      learn.summary || "",
+      ...(learn.key_concepts?.map((c) => `${c.term}. ${c.explanation}`) || []),
+    ]
+      .filter(Boolean)
+      .join(". ");
+    speak(allText, "all");
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -356,7 +375,7 @@ function LearnView({ learn }: { learn: LearnResult }) {
         <div className="w-12 h-12 rounded-2xl bg-foreground flex items-center justify-center shrink-0">
           <BookOpen className="w-6 h-6 text-background" />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h3 className="text-xl font-bold leading-tight mb-1">
             {learn.study_title}
           </h3>
@@ -365,6 +384,12 @@ function LearnView({ learn }: { learn: LearnResult }) {
             {learn.flashcards?.length || 0} flashcards
           </p>
         </div>
+        <SpeakButton
+          isActive={isSpeaking && activeId === "all"}
+          onClick={handleSpeakAll}
+          label="Listen all"
+          size="lg"
+        />
       </div>
 
       {/* Summary */}
@@ -375,11 +400,17 @@ function LearnView({ learn }: { learn: LearnResult }) {
           transition={{ delay: 0.1 }}
           className="p-5 rounded-2xl bg-foreground/[0.03] border border-border"
         >
-          <div className="flex items-center gap-2 mb-3">
-            <Lightbulb className="w-4 h-4 text-yellow-500" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Overview
-            </span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Lightbulb className="w-4 h-4 text-yellow-500" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Overview
+              </span>
+            </div>
+            <SpeakButton
+              isActive={isSpeaking && activeId === "summary"}
+              onClick={() => speak(learn.summary!, "summary")}
+            />
           </div>
           <p className="text-sm leading-relaxed">{learn.summary}</p>
         </motion.div>
@@ -406,12 +437,21 @@ function LearnView({ learn }: { learn: LearnResult }) {
                 <span className="w-8 h-8 rounded-xl bg-foreground text-background text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
                   {i + 1}
                 </span>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="font-semibold text-sm mb-1">{concept.term}</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     {concept.explanation}
                   </p>
                 </div>
+                <SpeakButton
+                  isActive={isSpeaking && activeId === `concept-${i}`}
+                  onClick={() =>
+                    speak(
+                      `${concept.term}. ${concept.explanation}`,
+                      `concept-${i}`,
+                    )
+                  }
+                />
               </motion.div>
             ))}
           </div>
@@ -452,19 +492,43 @@ function LearnView({ learn }: { learn: LearnResult }) {
                       <p className="font-semibold text-sm leading-snug">
                         {card.question}
                       </p>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          speak(card.question, `q-${i}`);
+                        }}
+                        className="absolute bottom-3 left-3 p-1.5 rounded-full hover:bg-foreground/5 transition-colors"
+                        aria-label="Listen to question"
+                      >
+                        <Volume2
+                          className={`w-3.5 h-3.5 ${isSpeaking && activeId === `q-${i}` ? "text-foreground animate-pulse" : "text-muted-foreground/40"}`}
+                        />
+                      </button>
                       <span className="absolute bottom-3 right-3 text-[10px] text-muted-foreground/40">
                         {i + 1}/{learn.flashcards.length}
                       </span>
                     </div>
                   }
                   backContent={
-                    <div className="flex flex-col items-center justify-center h-full p-5 text-center">
+                    <div className="flex flex-col items-center justify-center h-full p-5 text-center relative">
                       <span className="text-[10px] font-semibold uppercase tracking-widest text-emerald-500/70 mb-3">
                         Answer
                       </span>
                       <p className="text-sm leading-relaxed text-muted-foreground">
                         {card.answer}
                       </p>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          speak(card.answer, `a-${i}`);
+                        }}
+                        className="absolute bottom-3 left-3 p-1.5 rounded-full hover:bg-foreground/5 transition-colors"
+                        aria-label="Listen to answer"
+                      >
+                        <Volume2
+                          className={`w-3.5 h-3.5 ${isSpeaking && activeId === `a-${i}` ? "text-emerald-500 animate-pulse" : "text-muted-foreground/40"}`}
+                        />
+                      </button>
                     </div>
                   }
                 />
@@ -474,5 +538,37 @@ function LearnView({ learn }: { learn: LearnResult }) {
         </div>
       )}
     </div>
+  );
+}
+
+// ── Speaker Button ──
+function SpeakButton({
+  isActive,
+  onClick,
+  label,
+  size = "sm",
+}: {
+  isActive: boolean;
+  onClick: () => void;
+  label?: string;
+  size?: "sm" | "lg";
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 rounded-full transition-all shrink-0 ${
+        size === "lg"
+          ? "px-3 py-1.5 bg-muted hover:bg-muted/80 text-xs font-medium"
+          : "p-1.5 hover:bg-foreground/5"
+      } ${isActive ? "text-foreground" : "text-muted-foreground"}`}
+      aria-label={label || "Listen"}
+    >
+      <Volume2
+        className={`${size === "lg" ? "w-3.5 h-3.5" : "w-3.5 h-3.5"} ${isActive ? "animate-pulse" : ""}`}
+      />
+      {size === "lg" && (
+        <span className="hidden sm:inline">{isActive ? "Stop" : "Listen"}</span>
+      )}
+    </button>
   );
 }
