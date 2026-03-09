@@ -218,15 +218,34 @@ function cleanResponse(raw: string): string {
 
 export async function POST(request: NextRequest) {
   // ─── 1. AUTHENTICATE via PyawKyi API key ───
+  // Support both: Authorization header OR `apiKey` field in body
   const authHeader = request.headers.get("authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  let bodyRaw;
+  try {
+    bodyRaw = await request.json();
+  } catch {
+    return errorResponse("Invalid JSON body.", 400);
+  }
+
+  let pyawkyiKey = "";
+
+  // Option 1: Authorization header
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    pyawkyiKey = authHeader.replace("Bearer ", "").trim();
+  }
+
+  // Option 2: apiKey in body (easier for iOS Shortcuts)
+  if (!pyawkyiKey && bodyRaw.apiKey) {
+    pyawkyiKey = bodyRaw.apiKey.trim();
+  }
+
+  if (!pyawkyiKey) {
     return errorResponse(
-      "Missing Authorization header. Use: Bearer pk_live_xxxxx",
+      'Missing API key. Send via Authorization header (Bearer pk_live_xxx) or "apiKey" field in body.',
       401,
     );
   }
 
-  const pyawkyiKey = authHeader.replace("Bearer ", "").trim();
   if (!pyawkyiKey.startsWith("pk_live_")) {
     return errorResponse(
       "Invalid API key format. Must start with pk_live_",
@@ -273,12 +292,7 @@ export async function POST(request: NextRequest) {
   }
 
   // ─── 5. PARSE & VALIDATE body ───
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return errorResponse("Invalid JSON body.", 400);
-  }
+  const body = bodyRaw;
 
   const { mode, text, audioBase64, mimeType, imageBase64, imageMimeType } =
     body;
