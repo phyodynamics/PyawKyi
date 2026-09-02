@@ -21,6 +21,7 @@ import {
   Bot,
   MessageSquareText,
   Check,
+  AlertCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -77,6 +78,7 @@ export function UserSettings({
   const [apiKey, setApiKey] = useState("");
   const [editingKey, setEditingKey] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [keyError, setKeyError] = useState<string | null>(null);
   const [customPrompt, setCustomPrompt] = useState("");
   const [geminiModel, setGeminiModel] =
     useState<GeminiModel>(DEFAULT_GEMINI_MODEL);
@@ -144,20 +146,57 @@ export function UserSettings({
   };
 
   const handleSaveKey = async () => {
-    if (!apiKey.trim() || !apiKey.startsWith("AIza")) return;
+    const normalizedKey = apiKey.trim();
+    if (!normalizedKey) {
+      setKeyError("Please enter your Gemini API key.");
+      return;
+    }
+
     setSaving(true);
+    setKeyError(null);
+
+    try {
+      const response = await fetch("/api/validate-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: normalizedKey }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setKeyError(data.error || "Invalid API key. Please try again.");
+        setSaving(false);
+        return;
+      }
+    } catch {
+      setKeyError("Could not validate the API key. Please try again.");
+      setSaving(false);
+      return;
+    }
+
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (user) {
-      await supabase
+      const { error } = await supabase
         .from("users")
-        .update({ gemini_api_key: apiKey.trim() })
+        .update({ gemini_api_key: normalizedKey })
         .eq("id", user.id);
+
+      if (error) {
+        setKeyError("Failed to save the API key. Please try again.");
+        setSaving(false);
+        return;
+      }
+
       setProfile((prev) =>
-        prev ? { ...prev, gemini_api_key: apiKey.trim() } : prev,
+        prev ? { ...prev, gemini_api_key: normalizedKey } : prev,
       );
+    } else {
+      setKeyError("Your session has expired. Please sign in again.");
+      setSaving(false);
+      return;
     }
     setSaving(false);
     setEditingKey(false);
@@ -372,22 +411,36 @@ export function UserSettings({
                   <input
                     type="text"
                     value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="AIza..."
+                    onChange={(e) => {
+                      setApiKey(e.target.value);
+                      setKeyError(null);
+                    }}
+                    placeholder="AQ.… or AIza…"
                     className="w-full px-3 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-transparent font-mono text-xs focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white"
                   />
+                  <p className="text-[11px] text-neutral-400">
+                    Supports current AQ. authorization keys and legacy AIza
+                    keys.
+                  </p>
+                  {keyError && (
+                    <p className="flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      {keyError}
+                    </p>
+                  )}
                   <div className="flex gap-2">
                     <button
                       onClick={handleSaveKey}
-                      disabled={saving || !apiKey.startsWith("AIza")}
+                      disabled={saving || !apiKey.trim()}
                       className="flex-1 py-2 rounded-lg bg-black text-white dark:bg-white dark:text-black text-xs font-medium disabled:opacity-30"
                     >
-                      {saving ? "Saving..." : "Save"}
+                      {saving ? "Validating..." : "Save"}
                     </button>
                     <button
                       onClick={() => {
                         setEditingKey(false);
                         setApiKey(profile?.gemini_api_key || "");
+                        setKeyError(null);
                       }}
                       className="px-4 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800 text-xs"
                     >
@@ -416,7 +469,10 @@ export function UserSettings({
                       </button>
                     )}
                     <button
-                      onClick={() => setEditingKey(true)}
+                      onClick={() => {
+                        setEditingKey(true);
+                        setKeyError(null);
+                      }}
                       className="text-xs text-neutral-500 hover:text-black dark:hover:text-white px-2 py-1"
                     >
                       Edit

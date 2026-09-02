@@ -37,11 +37,6 @@ export default function SetupPage() {
       setError("Please enter your API key");
       return;
     }
-    if (!apiKey.startsWith("AIza")) {
-      setError("Invalid API key format. It should start with 'AIza'");
-      return;
-    }
-
     setSaving(true);
     setError(null);
 
@@ -172,9 +167,9 @@ export default function SetupPage() {
                   Click &quot;Create API Key&quot; and copy it
                 </p>
                 <p className="text-xs text-neutral-400 mt-0.5">
-                  It starts with{" "}
+                  Current and legacy key formats are both supported:{" "}
                   <code className="px-1 py-0.5 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs">
-                    AIza...
+                    AQ.… or AIza…
                   </code>
                 </p>
               </div>
@@ -198,7 +193,7 @@ export default function SetupPage() {
                 setError(null);
                 setSaved(false);
               }}
-              placeholder="AIza..."
+              placeholder="AQ.… or AIza…"
               className="w-full px-4 py-3 rounded-xl bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20"
             />
 

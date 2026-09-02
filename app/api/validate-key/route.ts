@@ -5,7 +5,15 @@ export async function POST(request: NextRequest) {
   try {
     const { apiKey } = await request.json();
 
-    if (!apiKey || !apiKey.trim().startsWith("AIza")) {
+    const normalizedKey = typeof apiKey === "string" ? apiKey.trim() : "";
+
+    // Google can change key prefixes (for example, AQ. authorization keys).
+    // Treat the API response as authoritative instead of hard-coding a prefix.
+    if (
+      !normalizedKey ||
+      normalizedKey.length > 4096 ||
+      /\s/.test(normalizedKey)
+    ) {
       return NextResponse.json(
         { valid: false, error: "Invalid key format" },
         { status: 400 },
@@ -13,8 +21,11 @@ export async function POST(request: NextRequest) {
     }
 
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey.trim()}`,
-      { signal: AbortSignal.timeout(10000) },
+      "https://generativelanguage.googleapis.com/v1beta/models",
+      {
+        headers: { "x-goog-api-key": normalizedKey },
+        signal: AbortSignal.timeout(10000),
+      },
     );
 
     if (res.ok) {

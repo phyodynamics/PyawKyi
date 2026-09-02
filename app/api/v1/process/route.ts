@@ -86,10 +86,13 @@ async function callGemini(
   model: string,
   apiKey: string,
 ): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
     body: JSON.stringify({
       system_instruction: {
         parts: [{ text: systemPrompt }],
@@ -143,7 +146,7 @@ async function callGeminiWithAudio(
   imageBase64?: string,
   imageMimeType?: string,
 ): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const userParts: Array<
     { text: string } | { inline_data: { mime_type: string; data: string } }
   > = [];
@@ -164,7 +167,10 @@ async function callGeminiWithAudio(
 
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
     body: JSON.stringify({
       system_instruction: {
         parts: [{ text: systemPrompt }],

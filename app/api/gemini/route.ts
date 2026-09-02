@@ -54,12 +54,13 @@ async function callGeminiAPI(
   apiKey: string,
   isCodeRefine: boolean = false,
 ): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
     },
     body: JSON.stringify({
       system_instruction: {
@@ -125,7 +126,7 @@ async function callGeminiWithAudio(
   imageMimeType?: string,
   maxTokens?: number,
 ): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   // User content parts: audio + optional image
   const userParts: Array<
@@ -160,6 +161,7 @@ async function callGeminiWithAudio(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
     },
     body: JSON.stringify({
       system_instruction: {
