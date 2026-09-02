@@ -88,7 +88,7 @@ const features = [
 
 const pricingFeatures = [
   { text: "Modes ၅ မျိုး (Polish, Plan, Craft, Build, Learn)", icon: Zap },
-  { text: "Burmese & English Support", icon: Star },
+  { text: "Any Language Support", icon: Star },
   { text: "Unlimited Voice Input", icon: Mic },
   { text: "Save & History", icon: Shield },
   { text: "PyawKyi API Key (Apple Shortcuts & Integrations)", icon: Code },
