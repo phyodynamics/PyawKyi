@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { composeSystemPrompt, resolveGeminiModel } from "@/lib/ai-preferences";
 
 // ═══════════════════════════════════════════════════
 // SECURITY: Rate limiting per user (20 req/min)
@@ -303,7 +304,7 @@ export async function POST(request: NextRequest) {
     // ─── 3. FETCH USER'S API KEY from Supabase ───
     const { data: profile } = await supabase
       .from("users")
-      .select("gemini_api_key, payment_status")
+      .select("gemini_api_key, payment_status, custom_prompt, gemini_model")
       .eq("id", user.id)
       .single();
 
@@ -375,57 +376,56 @@ export async function POST(request: NextRequest) {
 
     // ─── 5. PROXY REQUEST TO GEMINI API ───
     // User's API key stays on the server — never sent to the browser
-    const primaryModel = "gemini-3-flash-preview";
-    const fallbackModel = "gemini-2.5-flash";
+    const selectedModel = resolveGeminiModel(profile?.gemini_model);
+    const effectiveSystemPrompt = composeSystemPrompt(
+      systemPrompt,
+      profile?.custom_prompt,
+    );
 
     let result: string | null = null;
     let lastError: { message: string; isRetryable: boolean } | null = null;
 
-    for (const model of [primaryModel, fallbackModel]) {
-      try {
-        console.log(`[Gemini API] Trying model: ${model}, isAudio: ${isAudio}`);
-        if (isAudio && audioBase64) {
-          // Detect if this is a build mode call (needs more tokens for HTML)
-          const isBuildMode =
-            systemPrompt.includes("Frontend Engineer") ||
-            systemPrompt.includes("HTML5 mini-application");
-          result = await callGeminiWithAudio(
-            systemPrompt,
-            audioBase64,
-            mimeType || "audio/webm",
-            model,
-            userApiKey,
-            imageBase64,
-            imageMimeType,
-            isBuildMode ? 65536 : undefined,
-          );
-        } else {
-          result = await callGeminiAPI(
-            systemPrompt,
-            userContent,
-            model,
-            userApiKey,
-            !!isCodeRefine,
-          );
-        }
-        if (result && result.trim().length > 0) {
-          console.log(
-            `[Gemini API] Success with model: ${model}, response length: ${result.length}`,
-          );
-          break;
-        }
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Unknown error";
-        console.error(
-          `[Gemini API] Model ${model} failed:`,
-          errorMessage.slice(0, 300),
+    try {
+      console.log(
+        `[Gemini API] Trying saved model: ${selectedModel}, isAudio: ${isAudio}`,
+      );
+      if (isAudio && audioBase64) {
+        // Build mode needs more output tokens for a complete HTML document.
+        const isBuildMode =
+          systemPrompt.includes("Frontend Engineer") ||
+          systemPrompt.includes("HTML5 mini-application");
+        result = await callGeminiWithAudio(
+          effectiveSystemPrompt,
+          audioBase64,
+          mimeType || "audio/webm",
+          selectedModel,
+          userApiKey,
+          imageBase64,
+          imageMimeType,
+          isBuildMode ? 65536 : undefined,
         );
-        const statusMatch = errorMessage.match(/(\d{3})/);
-        const statusCode = statusMatch ? parseInt(statusMatch[1], 10) : 500;
-        lastError = parseApiError(statusCode, errorMessage);
-        if (!lastError.isRetryable) break;
+      } else {
+        result = await callGeminiAPI(
+          effectiveSystemPrompt,
+          userContent,
+          selectedModel,
+          userApiKey,
+          !!isCodeRefine,
+        );
       }
+      console.log(
+        `[Gemini API] Success with saved model: ${selectedModel}, response length: ${result.length}`,
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      console.error(
+        `[Gemini API] Saved model ${selectedModel} failed:`,
+        errorMessage.slice(0, 300),
+      );
+      const statusMatch = errorMessage.match(/(\d{3})/);
+      const statusCode = statusMatch ? parseInt(statusMatch[1], 10) : 500;
+      lastError = parseApiError(statusCode, errorMessage);
     }
 
     if (!result || result.trim().length === 0) {

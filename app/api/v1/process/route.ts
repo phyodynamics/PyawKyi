@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { SYSTEM_PROMPTS, BUILD_FIX_PROMPT } from "@/lib/prompts";
 import type { Mode } from "@/lib/types";
+import { composeSystemPrompt, resolveGeminiModel } from "@/lib/ai-preferences";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -276,7 +277,7 @@ export async function POST(request: NextRequest) {
   // ─── 4. FETCH user's Gemini key ───
   const { data: userProfile } = await service
     .from("users")
-    .select("gemini_api_key, payment_status")
+    .select("gemini_api_key, payment_status, custom_prompt, gemini_model")
     .eq("id", keyRecord.user_id)
     .single();
 
@@ -316,37 +317,36 @@ export async function POST(request: NextRequest) {
   }
 
   // ─── 6. PROCESS via Gemini ───
-  const systemPrompt = SYSTEM_PROMPTS[mode as Mode];
-  const primaryModel = "gemini-3-flash-preview";
-  const fallbackModel = "gemini-2.5-flash";
+  const selectedModel = resolveGeminiModel(userProfile.gemini_model);
+  const systemPrompt = composeSystemPrompt(
+    SYSTEM_PROMPTS[mode as Mode],
+    userProfile.custom_prompt,
+  );
 
   let result: string | null = null;
   let lastError: string | null = null;
 
-  for (const model of [primaryModel, fallbackModel]) {
-    try {
-      if (audioBase64 || imageBase64) {
-        result = await callGeminiWithAudio(
-          systemPrompt,
-          audioBase64 || "", // Fallback empty string if just sending an image
-          mimeType || "audio/webm",
-          model,
-          userProfile.gemini_api_key,
-          imageBase64,
-          imageMimeType,
-        );
-      } else {
-        result = await callGemini(
-          systemPrompt,
-          text,
-          model,
-          userProfile.gemini_api_key,
-        );
-      }
-      if (result && result.trim().length > 0) break;
-    } catch (error) {
-      lastError = error instanceof Error ? error.message : "Unknown error";
+  try {
+    if (audioBase64 || imageBase64) {
+      result = await callGeminiWithAudio(
+        systemPrompt,
+        audioBase64 || "", // Fallback empty string if just sending an image
+        mimeType || "audio/webm",
+        selectedModel,
+        userProfile.gemini_api_key,
+        imageBase64,
+        imageMimeType,
+      );
+    } else {
+      result = await callGemini(
+        systemPrompt,
+        text,
+        selectedModel,
+        userProfile.gemini_api_key,
+      );
     }
+  } catch (error) {
+    lastError = error instanceof Error ? error.message : "Unknown error";
   }
 
   if (!result || result.trim().length === 0) {
@@ -372,9 +372,9 @@ export async function POST(request: NextRequest) {
       if (generatedCode) {
         try {
           const fixResult = await callGemini(
-            BUILD_FIX_PROMPT,
+            composeSystemPrompt(BUILD_FIX_PROMPT, userProfile.custom_prompt),
             `original_request: "${text || "[Audio input]"}"\n\ngenerated_code: "${generatedCode.replace(/"/g, '\\"')}"`,
-            primaryModel,
+            selectedModel,
             userProfile.gemini_api_key,
           );
           const fixCleaned = cleanResponse(fixResult);

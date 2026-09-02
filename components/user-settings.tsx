@@ -18,14 +18,27 @@ import {
   ExternalLink,
   BookOpen,
   CreditCard,
+  Bot,
+  MessageSquareText,
+  Check,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import {
+  CUSTOM_PROMPT_MAX_LENGTH,
+  DEFAULT_GEMINI_MODEL,
+  GEMINI_MODEL_OPTIONS,
+  type GeminiModel,
+  normalizeCustomPrompt,
+  resolveGeminiModel,
+} from "@/lib/ai-preferences";
 
 interface UserProfile {
   email: string;
   name: string;
   avatar_url: string;
   gemini_api_key: string | null;
+  custom_prompt: string | null;
+  gemini_model: GeminiModel | null;
   price_paid: number | null;
 }
 
@@ -64,6 +77,13 @@ export function UserSettings({
   const [apiKey, setApiKey] = useState("");
   const [editingKey, setEditingKey] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [geminiModel, setGeminiModel] =
+    useState<GeminiModel>(DEFAULT_GEMINI_MODEL);
+  const [savingPreferences, setSavingPreferences] = useState(false);
+  const [preferenceStatus, setPreferenceStatus] = useState<
+    "idle" | "saved" | "error"
+  >("idle");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -79,12 +99,21 @@ export function UserSettings({
     if (user) {
       const { data } = await supabase
         .from("users")
-        .select("email, name, avatar_url, gemini_api_key, price_paid")
+        .select(
+          "email, name, avatar_url, gemini_api_key, custom_prompt, gemini_model, price_paid",
+        )
         .eq("id", user.id)
         .single();
       if (data) {
-        setProfile(data);
+        const normalizedProfile = {
+          ...data,
+          gemini_model: resolveGeminiModel(data.gemini_model),
+        } as UserProfile;
+        setProfile(normalizedProfile);
         setApiKey(data.gemini_api_key || "");
+        setCustomPrompt(data.custom_prompt || "");
+        setGeminiModel(resolveGeminiModel(data.gemini_model));
+        setPreferenceStatus("idle");
       }
     }
   };
@@ -132,6 +161,55 @@ export function UserSettings({
     }
     setSaving(false);
     setEditingKey(false);
+  };
+
+  const handleSavePreferences = async () => {
+    setSavingPreferences(true);
+    setPreferenceStatus("idle");
+
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setSavingPreferences(false);
+      setPreferenceStatus("error");
+      return;
+    }
+
+    const normalizedPrompt = normalizeCustomPrompt(customPrompt);
+    const normalizedModel = resolveGeminiModel(geminiModel);
+    const { data, error } = await supabase
+      .from("users")
+      .update({
+        custom_prompt: normalizedPrompt || null,
+        gemini_model: normalizedModel,
+      })
+      .eq("id", user.id)
+      .select("custom_prompt, gemini_model")
+      .single();
+
+    if (error || !data) {
+      setPreferenceStatus("error");
+    } else {
+      const savedPrompt = data.custom_prompt || "";
+      const savedModel = resolveGeminiModel(data.gemini_model);
+      setCustomPrompt(savedPrompt);
+      setGeminiModel(savedModel);
+      setProfile((previous) =>
+        previous
+          ? {
+              ...previous,
+              custom_prompt: savedPrompt || null,
+              gemini_model: savedModel,
+            }
+          : previous,
+      );
+      setPreferenceStatus("saved");
+    }
+
+    setSavingPreferences(false);
   };
 
   const handleLogout = async () => {
@@ -345,6 +423,112 @@ export function UserSettings({
                     </button>
                   </div>
                 </div>
+              )}
+            </div>
+
+            {/* AI Preferences */}
+            <div className="px-5 py-5 border-b border-neutral-200 dark:border-neutral-800">
+              <div className="flex items-center gap-2 mb-1">
+                <Bot className="w-4 h-4 text-neutral-500" />
+                <h3 className="text-sm font-medium">AI Preferences</h3>
+              </div>
+              <p className="text-xs leading-relaxed text-neutral-500 mb-4">
+                These settings are automatically used in the web app and with
+                your PyawKyi API key, including iOS Shortcuts.
+              </p>
+
+              <div className="space-y-2 mb-5">
+                <p className="text-xs font-medium">Gemini model</p>
+                {GEMINI_MODEL_OPTIONS.map((option) => {
+                  const isSelected = geminiModel === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => {
+                        setGeminiModel(option.id);
+                        setPreferenceStatus("idle");
+                      }}
+                      className={`w-full p-3 rounded-xl border text-left transition-colors ${
+                        isSelected
+                          ? "border-black bg-neutral-50 dark:border-white dark:bg-neutral-950"
+                          : "border-neutral-200 hover:border-neutral-400 dark:border-neutral-800 dark:hover:border-neutral-600"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-xs font-medium">
+                          {option.name}
+                        </span>
+                        <span
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                            isSelected
+                              ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
+                              : "border-neutral-300 dark:border-neutral-700"
+                          }`}
+                        >
+                          {isSelected && <Check className="w-2.5 h-2.5" />}
+                        </span>
+                      </div>
+                      <p className="text-[11px] leading-relaxed text-neutral-500 mt-1">
+                        {option.description}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <label
+                    htmlFor="custom-prompt"
+                    className="flex items-center gap-1.5 text-xs font-medium"
+                  >
+                    <MessageSquareText className="w-3.5 h-3.5 text-neutral-500" />
+                    Customize Prompt
+                  </label>
+                  <span className="text-[10px] tabular-nums text-neutral-400">
+                    {customPrompt.length}/{CUSTOM_PROMPT_MAX_LENGTH}
+                  </span>
+                </div>
+                <textarea
+                  id="custom-prompt"
+                  value={customPrompt}
+                  onChange={(event) => {
+                    setCustomPrompt(event.target.value);
+                    setPreferenceStatus("idle");
+                  }}
+                  maxLength={CUSTOM_PROMPT_MAX_LENGTH}
+                  rows={6}
+                  placeholder="Example: I am a software developer writing to clients. Preserve technical terms such as API, deployment, database, and production. Keep the message clear and professional."
+                  className="w-full resize-y px-3 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-transparent text-xs leading-relaxed placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white"
+                />
+                <p className="text-[11px] leading-relaxed text-neutral-500">
+                  Added after PyawKyi&apos;s main prompt. It guides vocabulary,
+                  domain terms, audience, and tone without replacing the mode
+                  rules.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleSavePreferences}
+                disabled={savingPreferences}
+                className="w-full mt-4 py-2.5 rounded-xl bg-black text-white dark:bg-white dark:text-black text-xs font-medium disabled:opacity-40 transition-opacity"
+              >
+                {savingPreferences
+                  ? "Saving preferences..."
+                  : "Save AI Preferences"}
+              </button>
+
+              {preferenceStatus === "saved" && (
+                <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
+                  Saved. New web and API requests will use these preferences.
+                </p>
+              )}
+              {preferenceStatus === "error" && (
+                <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+                  Could not save preferences. Please try again.
+                </p>
               )}
             </div>
 
